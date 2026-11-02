@@ -1155,17 +1155,32 @@ def _run_daemon(smoke_test: bool = False) -> None:
         try:
             from .dictation.dictation_engine import DictationEngine as _PTT, format_hotkey_display
 
+            # The face shows listening while the key is held. Ownership lets an
+            # answered query take the face over (thinking, speaking) without the
+            # end of the recording resetting it, while an empty or too-short
+            # recording still returns the face to idle.
+            push_to_talk_face = {"owner": None}
+
             def _on_push_to_talk_start():
                 voice_thread.set_capture_paused('push_to_talk', True)
                 try:
                     from jarvis.activity import JarvisState, get_jarvis_state
-                    get_jarvis_state().set_state(JarvisState.LISTENING)
+                    push_to_talk_face["owner"] = get_jarvis_state().acquire_state(
+                        JarvisState.LISTENING, restore_state=JarvisState.IDLE,
+                        protected_states={JarvisState.DICTATING, JarvisState.DICTATION_PROCESSING},
+                    )
                 except Exception:
                     pass
                 debug_log("push-to-talk recording started", "voice")
 
             def _on_push_to_talk_end():
                 voice_thread.set_capture_paused('push_to_talk', False)
+                try:
+                    from jarvis.activity import get_jarvis_state
+                    get_jarvis_state().release_state(push_to_talk_face["owner"])
+                except Exception:
+                    pass
+                push_to_talk_face["owner"] = None
                 debug_log("push-to-talk recording ended", "voice")
 
             def _deliver_push_to_talk(text: str) -> None:
