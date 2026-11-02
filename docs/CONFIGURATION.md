@@ -201,7 +201,7 @@ Each push-to-talk request prints a `📝 Heard (push-to-talk): "…"` line, so y
 
 ## Network Tools
 
-Builtin tools that reach the internet stay off until you allow them: `webSearch`, `fetchWebPage`, `getWeather`, and `getTime` when it has to look up another city. While they are off, models are not offered these tools and a request for one is refused before anything leaves your computer. Your own local time, and time zones given by name (such as `America/Sao_Paulo`), work offline.
+Builtin tools that reach the internet stay off until you allow them: `webSearch`, `fetchWebPage`, `getWeather`, and `getTime` when it has to look up another city. While they are off, models are not offered these tools and a request for one is refused before anything leaves your computer. Your own local time, time zones given by name (such as `America/Sao_Paulo`) and cities that name a time zone (São Paulo, Lisbon, Tokyo) work offline. For any other place, Jarvis answers with your local time and says that place's time zone could not be checked.
 
 ```json
 { "network_tools_enabled": true }

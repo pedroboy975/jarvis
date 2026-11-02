@@ -161,7 +161,9 @@ class TestTimeTool:
     def test_run_network_failure(self, mock_get, failure, expected):
         """Time lookup failures return an honest explanation without crashing."""
         mock_get.side_effect = failure
-        result = self.tool.run({"location": "London"}, self.context)
+        # A place that is not itself a zone name (nor cached by another test),
+        # so the lookup must hit the network.
+        result = self.tool.run({"location": "Cambridge"}, self.context)
         assert isinstance(result, ToolExecutionResult)
         assert result.success is False
         assert expected in result.reply_text.lower()
