@@ -194,6 +194,8 @@ class Settings:
     whisper_min_audio_duration: float
     # ISO-639-1 code Whisper transcribes in ("" = detect per utterance)
     whisper_language: str
+    # CPU threads for faster-whisper (0 = every logical core)
+    whisper_cpu_threads: int
 
     # Voice Activity Detection (VAD)
     vad_enabled: bool
@@ -571,6 +573,23 @@ def _normalise_disabled_tools(value: Any) -> list[str]:
     return names
 
 
+def _normalise_thread_count(value: Any) -> int:
+    """A positive thread count, or 0 for every logical core."""
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        return 0
+    try:
+        count = int(value)
+    except ValueError:
+        return 0
+    return count if count > 0 else 0
+
+
+def whisper_cpu_thread_count(cfg: Any) -> int:
+    """Threads faster-whisper uses on the CPU for this configuration."""
+    configured = _normalise_thread_count(getattr(cfg, "whisper_cpu_threads", 0))
+    return configured or (os.cpu_count() or 4)
+
+
 def whisper_language_code(cfg: Any) -> Optional[str]:
     """Language to pass to Whisper for this configuration (None = detect)."""
     return _normalise_whisper_language(getattr(cfg, "whisper_language", "")) or None
@@ -655,6 +674,10 @@ def get_default_config() -> Dict[str, Any]:
         # "en". Empty detects the language per utterance, which can mistake
         # short phrases for another language.
         "whisper_language": "",
+        # CPU threads for Whisper on the CPU. 0 uses every logical core. On
+        # hybrid CPUs the efficiency cores can slow transcription down; the
+        # number of performance cores is usually faster.
+        "whisper_cpu_threads": 0,
 
         # Voice Activity Detection (VAD)
         "vad_enabled": True,
@@ -981,6 +1004,7 @@ def load_settings() -> Settings:
     whisper_no_speech_threshold = float(merged.get("whisper_no_speech_threshold", 0.5))
     whisper_min_audio_duration = float(merged.get("whisper_min_audio_duration", 0.3))
     whisper_language = _normalise_whisper_language(merged.get("whisper_language"), warn=True)
+    whisper_cpu_threads = _normalise_thread_count(merged.get("whisper_cpu_threads"))
     llm_chat_timeout_sec = float(merged.get("llm_chat_timeout_sec", 180.0))
     llm_tools_timeout_sec = float(merged.get("llm_tools_timeout_sec", 300.0))
     llm_digest_timeout_sec = float(merged.get("llm_digest_timeout_sec", 8.0))
@@ -1056,6 +1080,7 @@ def load_settings() -> Settings:
         whisper_no_speech_threshold=whisper_no_speech_threshold,
         whisper_min_audio_duration=whisper_min_audio_duration,
         whisper_language=whisper_language,
+        whisper_cpu_threads=whisper_cpu_threads,
 
         # Voice Activity Detection (VAD)
         vad_enabled=vad_enabled,

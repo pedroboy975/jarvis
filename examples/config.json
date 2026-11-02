@@ -60,6 +60,7 @@
   "whisper_no_speech_threshold": 0.5,
   "whisper_min_audio_duration": 0.15,
   "whisper_language": "",
+  "whisper_cpu_threads": 0,
   "vad_enabled": true,
   "vad_aggressiveness": 2,
   "vad_frame_ms": 20,

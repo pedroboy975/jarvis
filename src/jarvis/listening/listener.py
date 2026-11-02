@@ -33,7 +33,7 @@ from .intent_judge import (
     create_intent_judge,
     warm_up_chat_model,
 )
-from ..config import whisper_language_code
+from ..config import whisper_cpu_thread_count, whisper_language_code
 from ..debug import debug_log
 from ..llm import get_embedding_backend
 from ..utils.location import is_location_available
@@ -2032,7 +2032,7 @@ class VoiceListener(threading.Thread):
             used_compute = compute
             for try_device, try_compute in configs_to_try:
                 try:
-                    cpu_threads = (os.cpu_count() or 4) if try_device in ("cpu", "auto") else 0
+                    cpu_threads = whisper_cpu_thread_count(self.cfg) if try_device in ("cpu", "auto") else 0
                     self.model = _load_faster_whisper_model(
                         model_name, device=try_device, compute_type=try_compute,
                         cpu_threads=cpu_threads,
@@ -2586,7 +2586,7 @@ class VoiceListener(threading.Thread):
                 print("  ⚠️ CUDA speech recognition failed, switching to CPU (this may be slower)", flush=True)
                 compute = getattr(self.cfg, "whisper_compute_type", "int8")
                 cpu_compute = "float32" if compute == "float32" else "int8"
-                cpu_threads = os.cpu_count() or 4
+                cpu_threads = whisper_cpu_thread_count(self.cfg)
                 # Publish the replacement only after a successful load. Dictation
                 # resolves its shared model reference while holding this lock.
                 model = _load_faster_whisper_model(
