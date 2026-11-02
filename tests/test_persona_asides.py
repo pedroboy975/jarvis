@@ -17,12 +17,15 @@ PLAIN = "Answer exactly what was asked, then stop"
 def test_asides_stay_on_by_default():
     assert get_default_config()["persona_asides_enabled"] is True
     assert WITTY in build_system_prompt("Jarvis")
+    assert "say the time without the date" not in build_system_prompt("Jarvis")
 
 
 def test_the_plain_persona_drops_the_aside_rules_and_keeps_the_shared_ones():
     prompt = build_system_prompt("Friday", asides=False)
 
     assert PLAIN in prompt
+    assert "one short sentence whenever it answers the question" in prompt
+    assert "say the time without the date" in prompt
     assert "named Friday" in prompt
     assert WITTY not in prompt
     assert "one short dry observation" not in prompt
