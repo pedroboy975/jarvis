@@ -200,6 +200,16 @@ Builtin tools that reach the internet stay off until you allow them: `webSearch`
 
 `web_search_enabled` and `wikipedia_fallback_enabled` still apply once network tools are on. MCP servers follow their own configuration.
 
+## Disabled Tools
+
+Switch off builtin tools you do not use, so a model can never pick them by mistake. Disabled tools are not offered to the model, and a request for one is refused before it runs:
+
+```json
+{ "disabled_tools": ["logMeal", "fetchMeals", "deleteMeal"] }
+```
+
+`stop` and `toolSearchTool` keep the reply loop working and cannot be disabled. The list applies to builtin tools; MCP servers follow their own configuration.
+
 ## Dictation Mode
 
 Hold a hotkey to record speech, release to paste the transcription into your editor, browser or other app. Transcription runs locally.

@@ -344,6 +344,11 @@ def _build_field_metadata() -> List[FieldMeta]:
       "Allow tools that reach the internet: web search, web pages, weather and "
       "time in other cities. Off keeps every request on this computer.",
       "features", "bool")
+    f("disabled_tools", "Disabled Tools",
+      "Builtin tools to switch off by name (e.g. logMeal, deleteMeal). They are "
+      "never offered to the model and are refused if named. stop and "
+      "toolSearchTool always stay on.",
+      "features", "list")
     f("web_search_enabled", "Web Search",
       "Enable web search tool",
       "features", "bool")

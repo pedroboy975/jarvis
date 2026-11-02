@@ -73,6 +73,7 @@ class MockConfig:
     # mock opens the gate; tests/test_network_tools_gate.py covers it closed.
     network_tools_enabled: bool = True
     whisper_language: str = ""
+    disabled_tools: list = field(default_factory=list)
     web_search_enabled: bool = True
     brave_search_api_key: str = ""
     wikipedia_fallback_enabled: bool = True
