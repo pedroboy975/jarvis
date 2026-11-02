@@ -62,6 +62,7 @@ from .planner import (
     tool_steps_of,
     tool_names_in_plan,
     plan_has_unresolved_tool_steps,
+    invented_tool_names,
     plan_requires_memory,
     strip_memory_directives,
     memory_topic_of,
@@ -1714,6 +1715,25 @@ def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
     _recovery_guidance = (_PLAN_RECOVERY_HINT
                           + (_NON_COMPLETION_HINT if use_text_tools else "")
                           + ("\n" + _resource_context if _resource_context else ""))
+
+    # A plan that calls a tool missing from the catalogue (invented, disabled
+    # or behind the network gate) cannot be executed. Its later steps often
+    # presume success ("confirm the note was deleted"), so the reply starts
+    # in recovery: the chat model sees an execution record instead of the
+    # task list, and the completion-evidence gate applies.
+    _invented_plan_tools = invented_tool_names(action_plan, _full_catalog_names)
+    if _invented_plan_tools:
+        _plan_in_recovery = True
+        _plan_recovery_record = (
+            "Planned steps called tools that are not available: "
+            + json.dumps(_invented_plan_tools)
+            + ". Those steps were not executed and nothing they describe has "
+            "happened. Successful tool results for this request: []. Use an "
+            "available tool if one fits; otherwise say plainly that it cannot "
+            "be done. Never state that the action was carried out."
+        )
+        debug_log(f"plan names unavailable tools: {_invented_plan_tools}", "planning")
+        print(f"    ⚠️ Plan names unavailable tools: {', '.join(_invented_plan_tools)}", flush=True)
 
     def _build_initial_system_message() -> str:
         guidance = [_persona_prompt.strip()]
