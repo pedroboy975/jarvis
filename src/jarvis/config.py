@@ -264,6 +264,9 @@ class Settings:
     location_auto_detect: bool
     location_cgnat_resolve_public_ip: bool
 
+    # Local files: the notes folder localFiles is confined to
+    local_files_root: str
+
     # Web Search
     web_search_enabled: bool
     # Optional Brave Search API key. When set, Brave is used as the primary
@@ -658,6 +661,10 @@ def get_default_config() -> Dict[str, Any]:
         # Uses a single OpenDNS resolver lookup of myip.opendns.com over DNS (no HTTP services). Disable to avoid any external request.
         "location_cgnat_resolve_public_ip": True,
 
+        # Local files: localFiles reads, lists, creates and appends text notes
+        # only inside this folder. It never overwrites or deletes a file.
+        "local_files_root": "~",
+
         # Web Search
         "web_search_enabled": True,
         "brave_search_api_key": "",
@@ -868,6 +875,7 @@ def load_settings() -> Settings:
     location_ip_address = None if location_ip_address_val in (None, "", "null") else str(location_ip_address_val)
     location_auto_detect = bool(merged.get("location_auto_detect", True))
     location_cgnat_resolve_public_ip = bool(merged.get("location_cgnat_resolve_public_ip", True))
+    local_files_root = str(merged.get("local_files_root") or "~").strip() or "~"
     web_search_enabled = bool(merged.get("web_search_enabled", True))
     brave_search_api_key = str(merged.get("brave_search_api_key", "") or "").strip()
     wikipedia_fallback_enabled = bool(merged.get("wikipedia_fallback_enabled", True))
@@ -999,6 +1007,8 @@ def load_settings() -> Settings:
         location_ip_address=location_ip_address,
         location_auto_detect=location_auto_detect,
         location_cgnat_resolve_public_ip=location_cgnat_resolve_public_ip,
+
+        local_files_root=local_files_root,
 
         # Web Search
         web_search_enabled=web_search_enabled,

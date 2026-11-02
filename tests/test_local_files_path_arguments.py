@@ -29,13 +29,17 @@ def test_non_string_paths_cannot_select_stringified_files(private_files, path, o
 @pytest.mark.parametrize('relative', [False, True])
 def test_string_paths_keep_file_operations(private_files, operation, relative):
     tool, context, home = private_files
-    target = home / ('123' if relative else 'notes.txt')
-    target.write_text('original')
+    target = home / ('123.md' if relative else 'notes.txt')
+    if operation != 'write':
+        target.write_text('original')
     path = target.name if relative else str(target)
     result = tool.run({'operation': operation, 'path': path, 'content': 'changed'}, context)
+    if operation == 'delete':
+        assert not result.success, '📁 Jarvis never deletes files'
+        assert target.read_text() == 'original'
+        return
     assert result.success, result.reply_text
     if operation == 'read': assert result.reply_text == 'original'
     elif operation == 'write': assert target.read_text() == 'changed'
     elif operation == 'append': assert target.read_text() == 'originalchanged'
-    elif operation == 'delete': assert not target.exists()
     else: assert target.name in result.reply_text
