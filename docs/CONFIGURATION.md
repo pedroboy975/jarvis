@@ -200,6 +200,14 @@ Builtin tools that reach the internet stay off until you allow them: `webSearch`
 
 `web_search_enabled` and `wikipedia_fallback_enabled` still apply once network tools are on. MCP servers follow their own configuration.
 
+## Persona
+
+Jarvis answers as a dry, witty butler: each casual answer ends with one short remark. Small models sometimes invent facts to fill that remark. Turn it off for plain answers that stop once the question is answered:
+
+```json
+{ "persona_asides_enabled": false }
+```
+
 ## Disabled Tools
 
 Switch off builtin tools you do not use, so a model can never pick them by mistake. Disabled tools are not offered to the model, and a request for one is refused before it runs:

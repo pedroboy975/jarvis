@@ -363,6 +363,10 @@ def _build_field_metadata() -> List[FieldMeta]:
     f("low_power_mode", "Low Power Mode",
       "Reduce background LLM residency and skip LLM startup warmup",
       "features", "bool")
+    f("persona_asides_enabled", "Witty Asides",
+      "End casual answers with a short dry remark (the butler persona). Off "
+      "answers plainly and stops; small models sometimes invent facts for the remark.",
+      "features", "bool")
     f("tune_enabled", "Startup Tune",
       "Play startup sound",
       "features", "bool")

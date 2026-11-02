@@ -5,7 +5,7 @@ This specification documents only the reply flow that begins when a valid user q
 ### Architecture Overview
 - Components:
   - Reply Engine (`src/jarvis/reply/engine.py`): Orchestrates conversation-memory enrichment, tool-use protocol, messages loop, output, and memory update.
-  - System Prompt (`src/jarvis/system_prompt.py`): Provides a unified `SYSTEM_PROMPT` with adaptive guidance for all topics. Declares the assistant's persona — a British butler named Jarvis with dry wit and light, good-natured sarcasm — with explicit behavioural rules (answer-first/quip-second, at most one quip, skip the quip for serious topics, no butler clichés, sarcasm never aimed at the user). The rules are phrased concretely rather than as tone adjectives so small models can follow them. Persona behaviour is not currently covered by an eval; add one if the tone regresses or the rules evolve.
+  - System Prompt (`src/jarvis/system_prompt.py`): Provides a unified `SYSTEM_PROMPT` with adaptive guidance for all topics. Declares the assistant's persona — a British butler named Jarvis with dry wit and light, good-natured sarcasm — with explicit behavioural rules (answer-first/quip-second, at most one quip, skip the quip for serious topics, no butler clichés, sarcasm never aimed at the user). The rules are phrased concretely rather than as tone adjectives so small models can follow them. With `persona_asides_enabled` false (default `true`) the butler block is replaced by a plain persona that answers what was asked and stops — no asides, jokes or unrequested facts, only what context, tool results or memory support — because small models invent facts to fill the required aside. The shared guidance after the persona block is identical in both modes. Persona behaviour is not currently covered by an eval; add one if the tone regresses or the rules evolve.
   - LLM Gateway (`src/jarvis/llm/`): pluggable backend abstraction (`LLMBackend` ABC + `OllamaBackend` impl, factory at `get_llm_backend(settings)`). The reply engine uses the function-style helper `chat_with_messages` (sends the messages array and returns raw JSON) and `extract_text_from_response` (normalises content across providers); both dispatch to the same backend. See `src/jarvis/llm/llm.spec.md`.
   - Conversation Memory (`src/jarvis/memory/conversation.py`): Supplies recent dialogue messages and keyword/time-bounded recall.
   - Enrichment LLM (`src/jarvis/reply/enrichment.py`): Extracts search params (keywords and optional time bounds) from the current query to drive conversation recall.
@@ -74,7 +74,7 @@ Design principles enforced by the engine:
    ]
 
    System message composition:
-   - Start with the unified persona prompt rendered by `build_system_prompt(cfg.wake_word.capitalize())`, so the butler's name matches the user's wake word.
+   - Start with the unified persona prompt rendered by `build_system_prompt(cfg.wake_word.capitalize(), asides=cfg.persona_asides_enabled)`, so the assistant's name matches the user's wake word and the persona follows the aside setting.
    - Append ASR note: inputs come from speech transcription and may include errors; prefer user intent and ask brief clarifying questions when uncertain.
    - Append the tool-use protocol (allowed response formats and MCP invocation format if configured).
    - Append diary enrichment under a combined reference-only + recency-weighting framing when enrichment produced context. Entries are ordered newest-first with `[YYYY-MM-DD]` prefixes preserved. The preamble carries two load-bearing clauses:

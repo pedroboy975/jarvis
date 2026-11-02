@@ -206,6 +206,8 @@ class Settings:
 
     # UI/UX Features
     tune_enabled: bool
+    # False swaps the witty butler for a plain persona that answers and stops
+    persona_asides_enabled: bool
     hot_window_enabled: bool
     hot_window_seconds: float
     low_power_mode: bool
@@ -665,6 +667,9 @@ def get_default_config() -> Dict[str, Any]:
 
         # UI/UX Features
         "tune_enabled": True,
+        # The butler persona ends casual answers with a dry aside. Small models
+        # sometimes invent facts to fill it; false answers plainly and stops.
+        "persona_asides_enabled": True,
         "hot_window_enabled": True,
         "hot_window_seconds": 3.0,
         "low_power_mode": False,
@@ -893,6 +898,7 @@ def load_settings() -> Settings:
     tts_max_utterance_ms = int(merged.get("tts_max_utterance_ms", 3000))
     sample_rate = int(merged.get("sample_rate", 16000))
     tune_enabled = bool(merged.get("tune_enabled", True))
+    persona_asides_enabled = merged.get("persona_asides_enabled", True) is not False
     hot_window_enabled = bool(merged.get("hot_window_enabled", True))
     hot_window_seconds = float(merged.get("hot_window_seconds", 3.0))
     low_power_mode = bool(merged.get("low_power_mode", False))
@@ -1062,6 +1068,7 @@ def load_settings() -> Settings:
 
         # UI/UX Features
         tune_enabled=tune_enabled,
+        persona_asides_enabled=persona_asides_enabled,
         hot_window_enabled=hot_window_enabled,
         hot_window_seconds=hot_window_seconds,
         low_power_mode=low_power_mode,
