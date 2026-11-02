@@ -21,7 +21,7 @@ from .builtin.stop import StopTool
 from .builtin.tool_search import ToolSearchTool
 from .types import ToolExecutionResult
 from .network import NETWORK_TOOLS, network_disabled_result, network_tools_enabled, offline_tools
-from ..config import Settings
+from ..config import Settings, UNDISABLEABLE_TOOLS
 from .external.mcp_client import MCPClient
 from ..debug import debug_log
 from ..utils.redact import scrub_secrets
@@ -43,9 +43,28 @@ BUILTIN_TOOLS = {
     "toolSearchTool": ToolSearchTool(),
 }
 
+def disabled_tool_names(cfg) -> frozenset:
+    """Builtin tools the user switched off with ``disabled_tools``."""
+    names = getattr(cfg, "disabled_tools", None)
+    if not isinstance(names, (list, tuple, set, frozenset)):
+        return frozenset()
+    return frozenset(n for n in names if isinstance(n, str)) - UNDISABLEABLE_TOOLS
+
+
 def builtin_tools_for(cfg) -> Dict[str, Any]:
-    """Builtin tools a reply may offer; network tools only when allowed."""
-    return offline_tools(BUILTIN_TOOLS, cfg)
+    """Builtin tools a reply may offer: network tools only when allowed,
+    never the ones the user switched off."""
+    disabled = disabled_tool_names(cfg)
+    return {name: tool for name, tool in offline_tools(BUILTIN_TOOLS, cfg).items()
+            if name not in disabled}
+
+
+def _disabled_tool_result(name: str) -> ToolExecutionResult:
+    message = (
+        f"{name} is turned off in this configuration (disabled_tools). It cannot "
+        "run. Do not offer or imply this action; tell the user it is unavailable."
+    )
+    return ToolExecutionResult(success=False, reply_text=message, error_message=message)
 
 
 # Global MCP tools cache
@@ -373,6 +392,13 @@ def _run_tool(
                 print(f"    {message}")
             except Exception:
                 pass
+
+    # Tools the user switched off never run, even when a model names one
+    # that was never offered to it (planner direct execution included).
+    if name in disabled_tool_names(cfg):
+        debug_log(f"disabled tool refused: {name}", "tools")
+        _user_print(f"🔒 {name} blocked: turned off in disabled_tools")
+        return _disabled_tool_result(name)
 
     # Network tools stay closed unless the user turned them on, even when a
     # model names one that was never offered to it.

@@ -282,6 +282,8 @@ class Settings:
 
     # Network tools: master gate for builtin tools that reach the internet
     network_tools_enabled: bool
+    # Builtin tools removed from every catalogue and refused when named
+    disabled_tools: list
 
     # Web Search
     web_search_enabled: bool
@@ -549,6 +551,24 @@ def _normalise_whisper_language(value: Any, warn: bool = False) -> str:
     return ""
 
 
+# The reply loop needs these to end a reply and to widen its tool list.
+UNDISABLEABLE_TOOLS = frozenset({"stop", "toolSearchTool"})
+
+
+def _normalise_disabled_tools(value: Any) -> list[str]:
+    """Tool names to switch off, without duplicates or loop-critical tools."""
+    names: list[str] = []
+    for name in _ensure_list(value):
+        name = name.strip()
+        if not name or name in names:
+            continue
+        if name in UNDISABLEABLE_TOOLS:
+            print(f"  ⚠️ Ignoring disabled_tools entry {name!r}: the reply loop needs it", flush=True)
+            continue
+        names.append(name)
+    return names
+
+
 def whisper_language_code(cfg: Any) -> Optional[str]:
     """Language to pass to Whisper for this configuration (None = detect)."""
     return _normalise_whisper_language(getattr(cfg, "whisper_language", "")) or None
@@ -716,6 +736,11 @@ def get_default_config() -> Dict[str, Any]:
         # Network tools: webSearch, fetchWebPage, getWeather and getTime's city
         # lookup reach the internet. They stay off until this is true.
         "network_tools_enabled": False,
+
+        # Builtin tools to switch off, by name (e.g. ["logMeal", "deleteMeal"]).
+        # They are never offered to a model and are refused if named.
+        # "stop" and "toolSearchTool" keep the reply loop working and stay on.
+        "disabled_tools": [],
 
         # Web Search
         "web_search_enabled": True,
@@ -934,6 +959,7 @@ def load_settings() -> Settings:
     location_cgnat_resolve_public_ip = bool(merged.get("location_cgnat_resolve_public_ip", True))
     local_files_root = str(merged.get("local_files_root") or "~").strip() or "~"
     network_tools_enabled = merged.get("network_tools_enabled", False) is True
+    disabled_tools = _normalise_disabled_tools(merged.get("disabled_tools"))
     web_search_enabled = bool(merged.get("web_search_enabled", True))
     brave_search_api_key = str(merged.get("brave_search_api_key", "") or "").strip()
     wikipedia_fallback_enabled = bool(merged.get("wikipedia_fallback_enabled", True))
@@ -1073,6 +1099,7 @@ def load_settings() -> Settings:
         local_files_root=local_files_root,
 
         network_tools_enabled=network_tools_enabled,
+        disabled_tools=disabled_tools,
 
         # Web Search
         web_search_enabled=web_search_enabled,

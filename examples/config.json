@@ -106,6 +106,7 @@
   "location_cgnat_resolve_public_ip": true,
   "local_files_root": "~",
   "network_tools_enabled": false,
+  "disabled_tools": [],
   "web_search_enabled": true,
   "brave_search_api_key": "",
   "wikipedia_fallback_enabled": true,
