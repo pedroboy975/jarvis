@@ -64,6 +64,15 @@ an atomic observer snapshot, rather than a cross-process transaction protocol.
 Callback exceptions, including observer task cancellation, cannot skip terminal
 cleanup or abandon later queued speech. Cancelling speech uses its request handle.
 
+## Reply language
+
+Each local voice speaks one language, so spoken replies follow the configured
+voice. With Piper, the chat system prompt asks for replies in the voice's
+language, named from its `.onnx.json` configuration (for example "Portuguese
+(Brazil)") or, before the configuration is available, from the locale in the
+voice file name. The default English voice and Chatterbox keep replies in
+English. Other engines add no language rule.
+
 ## Piper voice downloads
 
 Missing voice files are downloaded from the configured public model-file source.

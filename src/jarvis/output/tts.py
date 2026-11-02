@@ -7,6 +7,7 @@ import queue
 import shutil
 import signal
 import tempfile
+import json
 import os
 import re
 import sys
@@ -41,6 +42,45 @@ def _get_piper_models_dir() -> Path:
 def _get_default_piper_model_path() -> str:
     """Get the path to the default Piper voice model."""
     return str(_get_piper_models_dir() / f"{PIPER_DEFAULT_VOICE}.onnx")
+
+
+def _piper_voice_language(model_path: Optional[str]) -> str:
+    """Name the language a Piper voice speaks.
+
+    Reads the voice's `.onnx.json` configuration ("Portuguese (Brazil)") and
+    falls back to the locale in the voice file name ("pt_BR") when the
+    configuration is not available yet.
+    """
+    path = os.path.expanduser(model_path) if model_path else _get_default_piper_model_path()
+    try:
+        with open(path + ".json", encoding="utf-8") as handle:
+            language = json.load(handle).get("language") or {}
+        name = str(language.get("name_english") or "").strip()
+        country = str(language.get("country_english") or "").strip()
+        if name:
+            return f"{name} ({country})" if country else name
+    except (OSError, ValueError, AttributeError):
+        pass
+    locale = os.path.basename(path).split("-", 1)[0]
+    return locale or PIPER_DEFAULT_VOICE.split("-", 1)[0]
+
+
+def reply_language_instruction(tts_engine: str, piper_model_path: Optional[str]) -> Optional[str]:
+    """System-prompt rule that keeps spoken replies in a language the voice can say.
+
+    Piper voices speak one language each, so replies follow the configured
+    voice. Chatterbox speaks English only. Other engines add no rule.
+    """
+    if tts_engine == "piper":
+        language = _piper_voice_language(piper_model_path)
+    elif tts_engine == "chatterbox":
+        language = "English"
+    else:
+        return None
+    if language.lower().startswith("en"):
+        language = "English"
+    debug_log(f"Reply language follows the {tts_engine} voice: {language}", "tts")
+    return f"Always respond in {language} regardless of the language the user speaks in."
 
 
 def _download_piper_file(url, target_path, desc, log, progress_callback):

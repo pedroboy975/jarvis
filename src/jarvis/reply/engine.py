@@ -14,6 +14,7 @@ from ..tools.types import ToolExecutionResult
 from ..memory.conversation import DialogueMemory, is_tool_message
 
 from ..utils.redact import redact
+from ..output.tts import reply_language_instruction
 from ..system_prompt import build_system_prompt
 from ..tools.registry import run_tool_with_retries, generate_tools_description, generate_tools_json_schema, BUILTIN_TOOLS
 from ..tools.builtin.stop import STOP_SIGNAL
@@ -1717,14 +1718,14 @@ def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
         # Add model-size-appropriate prompt components
         guidance.extend(prompts.to_list())
 
-        # Both current TTS engines (Piper, Chatterbox) only support English.
-        # Responding in another language would produce garbled audio.
-        # Remove this constraint when a multilingual TTS engine is added.
-        tts_engine = getattr(cfg, 'tts_engine', 'piper')
-        if tts_engine in ('piper', 'chatterbox'):
-            guidance.append(
-                "Always respond in English regardless of the language the user speaks in."
-            )
+        # Each voice speaks one language; a reply in any other language
+        # would produce garbled audio, so replies follow the voice.
+        language_rule = reply_language_instruction(
+            getattr(cfg, 'tts_engine', 'piper'),
+            getattr(cfg, 'tts_piper_model_path', None),
+        )
+        if language_rule:
+            guidance.append(language_rule)
 
         if transcript_context:
             guidance.append(transcript_context)

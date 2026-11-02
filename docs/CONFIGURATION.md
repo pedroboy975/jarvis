@@ -218,6 +218,8 @@ To use different Piper voices, download from [HuggingFace](https://huggingface.c
 }
 ```
 
+Jarvis replies in the language of the configured Piper voice. A Brazilian Portuguese voice such as `pt_BR-faber-medium` makes spoken replies Brazilian Portuguese; it downloads automatically on first use when the path points at the Piper models folder.
+
 **Chatterbox** - AI voice with emotion control (requires running from source):
 ```json
 { "tts_engine": "chatterbox" }
