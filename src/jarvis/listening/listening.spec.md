@@ -320,6 +320,11 @@ or `"auto"` detects the language per utterance. Anything that is not a two- or
 three-letter code is ignored with a warning and detection is used. With a fixed
 language, push-to-talk dispatches that code as the request locale.
 
+**CPU threads:** when faster-whisper runs on the CPU (configured, or after a
+failed CUDA load or a CUDA transcription failure), it uses `whisper_cpu_threads`
+threads; `0` (default) or anything that is not a positive whole number uses every
+logical core. The same model serves dictation and push-to-talk.
+
 **Request locale:** Query collection stores accepted text and the detected language of its latest accepted segment as one immutable value. Clearing collection returns that snapshot and resets both fields. Rejected recognition, TTS echo, interruption-only controls and rejected intent decisions cannot replace a pending request's locale. An accepted segment with unknown language records `None`, which lets tools use their normal locale fallback. Dispatch carries the snapshot's language explicitly through the shared query lock to the reply engine.
 
 ## Rolling Transcript Buffer

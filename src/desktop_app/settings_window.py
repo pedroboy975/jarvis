@@ -260,6 +260,10 @@ def _build_field_metadata() -> List[FieldMeta]:
     f("whisper_min_confidence", "Min Confidence",
       "Filter low-confidence segments (hallucination guard)",
       "whisper", "float", min_val=0.0, max_val=1.0, step=0.05)
+    f("whisper_cpu_threads", "CPU Threads",
+      "Threads for Whisper on the CPU. 0 uses every core; on hybrid CPUs the number "
+      "of performance cores is usually faster.",
+      "whisper", "int", min_val=0, max_val=64)
     f("whisper_language", "Language",
       "ISO-639-1 code to transcribe in, such as pt or en. Leave empty to detect "
       "the language of each utterance (short phrases can be mistaken for another language).",

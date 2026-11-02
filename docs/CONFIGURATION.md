@@ -133,6 +133,15 @@ By default Whisper detects the language of each utterance. Short phrases can be 
 
 Leave it empty (`""`) to keep detection.
 
+#### CPU Threads
+On the CPU, Whisper uses every logical core by default. On hybrid processors (performance plus efficiency cores) that is often slower: in one measurement on a 24-core laptop, 8 threads transcribed a short phrase in 0.94 s against 1.27 s with 24, and left the other cores free for a local model.
+
+```json
+{ "whisper_cpu_threads": 8 }
+```
+
+`0` restores the default.
+
 </details>
 
 <details>

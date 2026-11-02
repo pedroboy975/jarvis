@@ -73,6 +73,7 @@ class MockConfig:
     # mock opens the gate; tests/test_network_tools_gate.py covers it closed.
     network_tools_enabled: bool = True
     whisper_language: str = ""
+    whisper_cpu_threads: int = 0
     persona_asides_enabled: bool = True
     disabled_tools: list = field(default_factory=list)
     web_search_enabled: bool = True
