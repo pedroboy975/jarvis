@@ -33,6 +33,7 @@ from .intent_judge import (
     create_intent_judge,
     warm_up_chat_model,
 )
+from ..config import whisper_language_code
 from ..debug import debug_log
 from ..llm import get_embedding_backend
 from ..utils.location import is_location_available
@@ -1044,6 +1045,9 @@ class VoiceListener(threading.Thread):
         """
         if not isinstance(query, str) or not query.strip():
             return
+        # Show what Whisper heard, as the ambient path does, so a wrong
+        # transcription is visible next to the reply it produced.
+        print(f"\n{'─' * 50}\n📝 Heard (push-to-talk): \"{query.strip()}\"", flush=True)
         debug_log("push-to-talk query received", "voice")
         self._dispatch_query(query.strip(), language=language,
                              generation=self._capture_generation, explicit=True)
@@ -2600,7 +2604,7 @@ class VoiceListener(threading.Thread):
         """Consume lazy segments before releasing the shared model lock."""
         cpu_mode = self._whisper_device == "cpu"
         segments, info = self.model.transcribe(
-            audio, language=None, vad_filter=True,
+            audio, language=whisper_language_code(self.cfg), vad_filter=True,
             no_speech_threshold=self.cfg.whisper_no_speech_threshold,
             condition_on_previous_text=False,
             without_timestamps=cpu_mode,
@@ -2621,7 +2625,7 @@ class VoiceListener(threading.Thread):
                     result = mlx_whisper.transcribe(
                         audio,
                         path_or_hf_repo=self._mlx_model_repo,
-                        language=None,
+                        language=whisper_language_code(self.cfg),
                     )
 
                 # Capture Whisper's auto-detected language (ISO-639-1) so

@@ -28,6 +28,7 @@ def _mock_cfg():
     cfg.location_ip_address = None
     cfg.location_auto_detect = False
     cfg.location_enabled = False
+    cfg.network_tools_enabled = True  # carryover cases replay webSearch results
     cfg.agentic_max_turns = 8
     cfg.tool_search_max_calls = 3
     cfg.tool_selection_strategy = "all"

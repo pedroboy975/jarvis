@@ -219,6 +219,11 @@ default.
 
 ### Configuration
 
+- `network_tools_enabled` (bool, default `false`): master gate for every
+  builtin tool that reaches the internet. While it is `false`, `webSearch`
+  is left out of the tool catalogues and refused if a model names it, so no
+  query leaves the machine. `web_search_enabled` applies only after this
+  gate is open.
 - `web_search_enabled` (bool, default `true`): disable the tool entirely
   via config. When disabled, the tool returns a user-visible "disabled"
   message and does not hit the network.

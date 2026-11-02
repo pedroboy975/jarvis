@@ -192,6 +192,8 @@ class Settings:
     whisper_min_confidence: float
     whisper_no_speech_threshold: float
     whisper_min_audio_duration: float
+    # ISO-639-1 code Whisper transcribes in ("" = detect per utterance)
+    whisper_language: str
 
     # Voice Activity Detection (VAD)
     vad_enabled: bool
@@ -277,6 +279,9 @@ class Settings:
 
     # Local files: the notes folder localFiles is confined to
     local_files_root: str
+
+    # Network tools: master gate for builtin tools that reach the internet
+    network_tools_enabled: bool
 
     # Web Search
     web_search_enabled: bool
@@ -525,6 +530,30 @@ def _ensure_dict(value: Any) -> Dict[str, Any]:
     return {}
 
 
+def _normalise_whisper_language(value: Any, warn: bool = False) -> str:
+    """Return a Whisper language code, or "" to detect it per utterance.
+
+    Whisper codes are two or three lowercase letters ("pt", "en", "haw").
+    Anything else would make transcription fail, so it falls back to
+    detection instead.
+    """
+    if not isinstance(value, str):
+        return ""
+    code = value.strip().lower()
+    if code in ("", "auto"):
+        return ""
+    if len(code) in (2, 3) and code.isascii() and code.isalpha():
+        return code
+    if warn:
+        print(f"  ⚠️ Ignoring whisper_language {value!r}: use a code such as \"pt\" or \"en\"", flush=True)
+    return ""
+
+
+def whisper_language_code(cfg: Any) -> Optional[str]:
+    """Language to pass to Whisper for this configuration (None = detect)."""
+    return _normalise_whisper_language(getattr(cfg, "whisper_language", "")) or None
+
+
 def get_default_config() -> Dict[str, Any]:
     """Returns the default configuration values."""
     return {
@@ -600,6 +629,10 @@ def get_default_config() -> Dict[str, Any]:
         "whisper_min_confidence": 0.3,  # Filter low-confidence segments (hallucinations)
         "whisper_no_speech_threshold": 0.5,  # Hard cutoff: reject segments where no_speech_prob >= this
         "whisper_min_audio_duration": 0.15,
+        # Language Whisper transcribes in, as an ISO-639-1 code such as "pt" or
+        # "en". Empty detects the language per utterance, which can mistake
+        # short phrases for another language.
+        "whisper_language": "",
 
         # Voice Activity Detection (VAD)
         "vad_enabled": True,
@@ -679,6 +712,10 @@ def get_default_config() -> Dict[str, Any]:
         # Local files: localFiles reads, lists, creates and appends text notes
         # only inside this folder. It never overwrites or deletes a file.
         "local_files_root": "~",
+
+        # Network tools: webSearch, fetchWebPage, getWeather and getTime's city
+        # lookup reach the internet. They stay off until this is true.
+        "network_tools_enabled": False,
 
         # Web Search
         "web_search_enabled": True,
@@ -896,6 +933,7 @@ def load_settings() -> Settings:
     location_auto_detect = bool(merged.get("location_auto_detect", True))
     location_cgnat_resolve_public_ip = bool(merged.get("location_cgnat_resolve_public_ip", True))
     local_files_root = str(merged.get("local_files_root") or "~").strip() or "~"
+    network_tools_enabled = merged.get("network_tools_enabled", False) is True
     web_search_enabled = bool(merged.get("web_search_enabled", True))
     brave_search_api_key = str(merged.get("brave_search_api_key", "") or "").strip()
     wikipedia_fallback_enabled = bool(merged.get("wikipedia_fallback_enabled", True))
@@ -910,6 +948,7 @@ def load_settings() -> Settings:
     whisper_min_confidence = float(merged.get("whisper_min_confidence", 0.4))
     whisper_no_speech_threshold = float(merged.get("whisper_no_speech_threshold", 0.5))
     whisper_min_audio_duration = float(merged.get("whisper_min_audio_duration", 0.3))
+    whisper_language = _normalise_whisper_language(merged.get("whisper_language"), warn=True)
     llm_chat_timeout_sec = float(merged.get("llm_chat_timeout_sec", 180.0))
     llm_tools_timeout_sec = float(merged.get("llm_tools_timeout_sec", 300.0))
     llm_digest_timeout_sec = float(merged.get("llm_digest_timeout_sec", 8.0))
@@ -984,6 +1023,7 @@ def load_settings() -> Settings:
         whisper_min_confidence=whisper_min_confidence,
         whisper_no_speech_threshold=whisper_no_speech_threshold,
         whisper_min_audio_duration=whisper_min_audio_duration,
+        whisper_language=whisper_language,
 
         # Voice Activity Detection (VAD)
         vad_enabled=vad_enabled,
@@ -1031,6 +1071,8 @@ def load_settings() -> Settings:
         location_cgnat_resolve_public_ip=location_cgnat_resolve_public_ip,
 
         local_files_root=local_files_root,
+
+        network_tools_enabled=network_tools_enabled,
 
         # Web Search
         web_search_enabled=web_search_enabled,

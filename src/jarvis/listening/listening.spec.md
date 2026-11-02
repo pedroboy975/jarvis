@@ -92,7 +92,9 @@ is the explicit path while paused: holding the hotkey records with the shared
 Whisper model under its own `push_to_talk` capture pause reason, and releasing it
 hands the transcript to `dispatch_push_to_talk`. That query is answered with
 speech even while ambient capture is paused; only daemon shutdown discards it.
-Push-to-talk transcripts are not saved to dictation history.
+Push-to-talk transcripts are not saved to dictation history. Each dispatched
+push-to-talk transcript is printed as a `📝 Heard (push-to-talk)` line, as the
+ambient path prints `📝 Heard`, so the transcript sits next to its reply.
 Callback blocks snapshot the audio generation at callback entry,
 before status bookkeeping, pause checks or sample copies; a reset during
 admission cannot relabel old audio as fresh. Stale blocks
@@ -310,6 +312,13 @@ While TTS is playing, echo rejection and stop commands are handled with fast tex
 - Exact prefix comparisons during and after TTS retain Unicode letters and numbers, normalise canonical composition and casing, and ignore surrounding punctuation. Unrelated non-Latin speech must not become an empty-token echo match.
 - Transcripts during TTS are flagged with `is_during_tts=true`
 - Intent judge uses this context to identify echo
+
+**Transcription language:** `whisper_language` (default `""`) fixes the
+language of every Whisper call — ambient listening, dictation and push-to-talk.
+An ISO-639-1 code such as `"pt"` is passed to Whisper for both backends; empty
+or `"auto"` detects the language per utterance. Anything that is not a two- or
+three-letter code is ignored with a warning and detection is used. With a fixed
+language, push-to-talk dispatches that code as the request locale.
 
 **Request locale:** Query collection stores accepted text and the detected language of its latest accepted segment as one immutable value. Clearing collection returns that snapshot and resets both fields. Rejected recognition, TTS echo, interruption-only controls and rejected intent decisions cannot replace a pending request's locale. An accepted segment with unknown language records `None`, which lets tools use their normal locale fallback. Dispatch carries the snapshot's language explicitly through the shared query lock to the reply engine.
 

@@ -283,6 +283,8 @@ class MockConfig:
     tts_chatterbox_audio_prompt: Optional[str] = None
     tts_chatterbox_exaggeration: float = 0.5
     tts_chatterbox_cfg_weight: float = 0.5
+    # Evals score routing to webSearch and getWeather, so network tools are offered.
+    network_tools_enabled: bool = True
     web_search_enabled: bool = True
     brave_search_api_key: str = ""
     wikipedia_fallback_enabled: bool = True
@@ -334,7 +336,7 @@ def isolated_voice_settings():
             "llm_chat_model": selected.llm_chat_model, "fast_model": selected.fast_model,
             "ollama_base_url": selected.ollama_base_url, "db_path": ":memory:",
             "memory_enrichment_source": "diary", "location_enabled": False,
-            "tts_enabled": False, "mcps": {},
+            "tts_enabled": False, "mcps": {}, "network_tools_enabled": True,
         }))
         with patch.dict(os.environ, {"JARVIS_CONFIG_PATH": str(path)}):
             cfg = load_settings()

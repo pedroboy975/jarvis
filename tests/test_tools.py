@@ -14,6 +14,7 @@ class DummyCfg:
         self.location_auto_detect = False
         self.use_stdin = True
         self.web_search_enabled = False
+        self.network_tools_enabled = True
         self.mcps = {}
 
 

@@ -1076,6 +1076,7 @@ class TestWikipediaLanguageScriptMismatch:
         from jarvis.tools.registry import run_tool_with_retries
         cfg = Mock()
         cfg.web_search_enabled = True
+        cfg.network_tools_enabled = True
         cfg.voice_debug = False
         cfg.brave_search_api_key = ""
         cfg.wikipedia_fallback_enabled = True
@@ -1119,6 +1120,7 @@ class TestWikipediaLanguageScriptMismatch:
         from jarvis.tools.registry import run_tool_with_retries
         cfg = Mock()
         cfg.web_search_enabled = True
+        cfg.network_tools_enabled = True
         cfg.voice_debug = False
         cfg.brave_search_api_key = ""
         cfg.wikipedia_fallback_enabled = True
@@ -1166,6 +1168,7 @@ class TestLanguagePlumbingEndToEnd:
 
         cfg = Mock()
         cfg.web_search_enabled = True
+        cfg.network_tools_enabled = True
         cfg.voice_debug = False
         cfg.brave_search_api_key = ""
         cfg.wikipedia_fallback_enabled = True

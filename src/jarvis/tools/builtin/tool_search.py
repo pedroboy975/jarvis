@@ -66,7 +66,9 @@ class ToolSearchTool(Tool):
 
         cfg = context.cfg
         # Local imports to avoid circulars at module load time.
-        from ..registry import BUILTIN_TOOLS, get_cached_mcp_tools
+        from ..registry import builtin_tools_for, get_cached_mcp_tools
+
+        builtin_tools = builtin_tools_for(cfg)
 
         try:
             strategy = ToolSelectionStrategy(getattr(cfg, "tool_selection_strategy", "llm"))
@@ -83,7 +85,7 @@ class ToolSearchTool(Tool):
             selected = select_tools(
                 query=query,
                 transcript_context=context.transcript_context,
-                builtin_tools=BUILTIN_TOOLS,
+                builtin_tools=builtin_tools,
                 mcp_tools=mcp_tools,
                 strategy=strategy,
                 llm_backend=get_llm_backend(cfg),
@@ -103,7 +105,12 @@ class ToolSearchTool(Tool):
 
         # Filter out the sentinel/self so the formatted output only lists
         # actionable candidates for the chat model to choose from.
-        real = [n for n in selected if n and n not in ("stop", "toolSearchTool")]
+        # Only names this reply may use: a router that echoes a tool outside
+        # the catalogue (such as a network tool while the gate is closed)
+        # must not surface it.
+        real = [n for n in selected
+                if n and n not in ("stop", "toolSearchTool")
+                and (n in builtin_tools or n in mcp_tools)]
         if not real:
             debug_log(
                 f"toolSearchTool: no additional tools found for query={query!r}",
@@ -118,7 +125,7 @@ class ToolSearchTool(Tool):
         lines: list[str] = []
         for tname in real:
             desc = ""
-            tool_obj = BUILTIN_TOOLS.get(tname)
+            tool_obj = builtin_tools.get(tname)
             if tool_obj is not None:
                 desc = (getattr(tool_obj, "description", "") or "").strip()
             else:

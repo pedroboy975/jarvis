@@ -43,6 +43,8 @@ def comparison_settings(base_url: str, model: str, *, fast_model: str = "", api_
             "llm_chat_model": model, "fast_model": fast_model or model,
             "db_path": ":memory:", "location_enabled": False,
             "mcps": {}, "tts_enabled": False, "memory_enrichment_source": "diary",
+            # Cases measure routing to webSearch, so the catalogue includes network tools.
+            "network_tools_enabled": True,
         }))
         with patch.dict(os.environ, {"JARVIS_CONFIG_PATH": str(path)}):
             cfg = load_settings()

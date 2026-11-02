@@ -29,6 +29,9 @@ The engine also serves push-to-talk. Given a `deliver` callback it hands the
 transcript to that callback instead of pasting it, and with `record_history`
 false it saves nothing to dictation history. The daemon runs a second engine on
 `push_to_talk_hotkey` with both options; see `listening.spec.md`.
+Both engines transcribe in `whisper_language` when it is set (see
+`listening.spec.md`, Transcription language); otherwise Whisper detects the
+language of each recording.
 
 Defaults are aligned with WisprFlow. Modifier-only combos are supported
 (e.g. `"ctrl+cmd"` activates when both keys are held, with no extra trigger

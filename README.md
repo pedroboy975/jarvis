@@ -21,7 +21,7 @@ Jarvis is built to be part of the conversation. Talk through an idea, discuss pl
 
 Address Jarvis by name anywhere in a sentence and follow up naturally. Speech recognition, language models and speech synthesis run on hardware you control.
 
-Your diary and knowledge graph stay on your computer. Speech and chat models run locally when you use a local model server. Sensitive information is redacted before reaching model context or the saved diary. Web search, weather and connected tools use the network for those requests.
+Your diary and knowledge graph stay on your computer. Speech and chat models run locally when you use a local model server. Sensitive information is redacted before reaching model context or the saved diary. Web search, web pages, weather and city time lookups use the network only after you turn on `network_tools_enabled`; connected MCP tools follow their own configuration.
 
 <p align="center">
   <img src="docs/img/face.png" alt="Jarvis's floating amber face, with no frame or background" width="420">
@@ -70,7 +70,7 @@ For an experimental 27B alternative, see the [Bonsai 2 local setup guide](docs/B
 
 - **A third person in the room.** Bring Jarvis into an ongoing conversation with friends, talk through a problem aloud, or ask it to weigh in on a decision. “Jarvis, what do you think?” draws on the recent discussion, not just that one sentence.
 - **Remember beyond one session.** Ask about past conversations, preferences and plans. Browse your local diary and knowledge graph in the Memory Viewer.
-- **Get things done.** Built-in tools cover web search, weather, time, screenshot OCR, file access, nutrition tracking and optional location awareness.
+- **Get things done.** Built-in tools cover time, screenshot OCR, file access, nutrition tracking and optional location awareness, plus web search and weather once network tools are on.
 - **Connect your own tools.** MCP servers add browser automation, smart-home controls and other integrations.
 - **Push to talk.** Voice listening starts paused. Hold Alt + Win, speak and release, and Jarvis answers out loud without listening to the rest of the room. [Settings →](docs/CONFIGURATION.md#push-to-talk-and-ambient-listening)
 - **Dictate into other apps.** Hold a hotkey, speak, then release to paste locally transcribed text. See the [platform limitations](#known-limitations) first.

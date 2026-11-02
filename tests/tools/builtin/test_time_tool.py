@@ -22,6 +22,8 @@ class TestTimeTool:
         self.context.user_print = Mock()
         self.context.cfg = Mock()
         self.context.cfg.llm_tools_timeout_sec = 8.0
+        # City lookups reach the geocoding service.
+        self.context.cfg.network_tools_enabled = True
         self.context.redacted_text = ""
 
     def test_tool_properties(self):

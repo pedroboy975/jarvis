@@ -16,7 +16,7 @@ from ..memory.conversation import DialogueMemory, is_tool_message
 from ..utils.redact import redact
 from ..output.tts import reply_language_instruction
 from ..system_prompt import build_system_prompt
-from ..tools.registry import run_tool_with_retries, generate_tools_description, generate_tools_json_schema, BUILTIN_TOOLS
+from ..tools.registry import run_tool_with_retries, generate_tools_description, generate_tools_json_schema, BUILTIN_TOOLS, builtin_tools_for
 from ..tools.builtin.stop import STOP_SIGNAL
 from ..debug import debug_log
 from ..llm import (
@@ -1090,7 +1090,9 @@ def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
     # A positive single-step ``["Reply to the user."]`` plan is NOT the
     # same as ``[]``: it's the planner deciding no memory or tools are
     # needed. Both cases are preserved for the engine to distinguish.
-    _all_builtin_names = list(BUILTIN_TOOLS.keys())
+    # Network tools are absent from every catalogue unless the user allows them.
+    _builtin_tools = builtin_tools_for(cfg)
+    _all_builtin_names = list(_builtin_tools.keys())
     _all_mcp_names = list(mcp_tools.keys())
     _full_catalog_names = _all_builtin_names + _all_mcp_names
 
@@ -1131,7 +1133,7 @@ def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
                 name: {"description": tool.description, "inputSchema": tool.inputSchema}
                 for name, tool in tools.items()
             }
-            for source, tools in (("builtin", BUILTIN_TOOLS), ("mcp", mcp_tools or {}))
+            for source, tools in (("builtin", _builtin_tools), ("mcp", mcp_tools or {}))
         },
     })
     _cached_routed = (
@@ -1146,7 +1148,7 @@ def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
             return None
         routed_tools = select_tools(
             query=redacted,
-            builtin_tools=BUILTIN_TOOLS,
+            builtin_tools=_builtin_tools,
             mcp_tools=mcp_tools,
             strategy=strategy,
             llm_backend=get_llm_backend(cfg),
@@ -2615,7 +2617,7 @@ def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
                     # tool in the registry; otherwise stray prose lines
                     # like "No additional tools found for that description."
                     # get treated as tool names and pollute the allow-list.
-                    _valid_names = set(BUILTIN_TOOLS.keys())
+                    _valid_names = set(builtin_tools_for(cfg).keys())
                     if mcp_tools:
                         _valid_names.update(mcp_tools.keys())
                     for line in (result.reply_text or "").splitlines():

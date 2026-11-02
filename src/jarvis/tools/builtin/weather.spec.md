@@ -1,5 +1,7 @@
 # Weather place extraction
 
+`getWeather` is a network tool: it is offered to models and runs only when `network_tools_enabled` is `true` (default `false`). While the gate is closed the registry refuses it before geocoding or forecast requests.
+
 `_extract_place_from_user_text` supplies a missing location argument when
 `getWeather` has no detected user coordinates. It extracts from the redacted
 user utterance using the configured FAST-tier backend, a bounded 1,024-token generation
