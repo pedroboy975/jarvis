@@ -47,13 +47,15 @@ class RequestTiming:
     voice: Optional[float] = None
     speech_seconds: Optional[float] = None
     ok: bool = True
+    # Extra measured phases (e.g. push-to-talk mic_open_s, whisper_s), seconds.
+    phases: dict = field(default_factory=dict)
     _written: bool = field(default=False, repr=False)
 
     def record(self) -> dict:
         def span(start, end):
             return round(end - start, 2) if start is not None and end is not None else None
 
-        return {
+        record = {
             "ts": datetime.now().isoformat(timespec="seconds"),
             "source": self.source,
             "transcribe_s": span(self.started, self.heard),
@@ -62,6 +64,11 @@ class RequestTiming:
             "speech_s": round(self.speech_seconds, 2) if self.speech_seconds is not None else None,
             "ok": self.ok,
         }
+        for key, value in self.phases.items():
+            if isinstance(key, str) and key not in record and isinstance(value, (int, float)) \
+                    and not isinstance(value, bool):
+                record[key] = value
+        return record
 
 
 def write_timing(cfg: Any, timing: Optional[RequestTiming]) -> None:
