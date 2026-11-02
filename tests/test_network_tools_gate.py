@@ -72,11 +72,12 @@ def test_a_named_network_tool_is_refused_without_a_request(name, args):
 
 
 @pytest.mark.usefixtures("no_network")
-def test_time_in_another_city_is_refused_offline():
-    result = _run(_cfg(False), "getTime", {"location": "Paris"})
+def test_time_in_a_city_without_its_own_zone_falls_back_to_local_time_offline():
+    result = _run(_cfg(False), "getTime", {"location": "Belo Horizonte"})
 
-    assert result.success is False
-    assert "network_tools_enabled" in result.reply_text
+    assert result.success is True
+    assert "cannot be looked up offline" in result.reply_text
+    assert "The user's own local time is:" in result.reply_text
 
 
 @pytest.mark.usefixtures("no_network")

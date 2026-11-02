@@ -3,7 +3,10 @@
 Resolves a user-named place (city, country) to its IANA timezone via the
 same Open-Meteo geocoding endpoint the weather tool uses, then formats the
 current instant in that zone with ``format_time_context``. A bare IANA
-zone name (``Europe/Athens``) is used directly without a network call.
+zone name (``Europe/Athens``) and a city that names a zone (``São Paulo``,
+``Tokyo``: matched against the zoneinfo database, ignoring accents and case)
+are resolved without a network call. With network tools off, any other place
+returns the user's own local time, labelled as unconfirmed for that place.
 
 The tool is deliberately LLM-free: timezone arithmetic is deterministic,
 so time questions never ride on a small model's ability to compute UTC
@@ -13,21 +16,24 @@ cannot cover — a named place in another timezone.
 """
 
 import re
+import unicodedata
+from functools import lru_cache
 from typing import Any, Dict, Optional, Tuple
 
 import requests
 
 try:
-    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError, available_timezones
 except ImportError:  # pragma: no cover - Python < 3.9
     ZoneInfo = None  # type: ignore[assignment]
     ZoneInfoNotFoundError = Exception  # type: ignore[assignment,misc]
+    available_timezones = None  # type: ignore[assignment]
 
 from ...debug import debug_log
 from ...utils.location import get_location_context_with_timezone
 from ...utils.time_context import format_time_context
 from ..base import Tool, ToolContext
-from ..network import network_disabled_result, network_tools_enabled
+from ..network import network_tools_enabled
 from ..types import ToolExecutionResult
 
 # Open-Meteo geocoding returns an IANA ``timezone`` field per result (the
@@ -53,6 +59,58 @@ def _is_valid_iana_zone(value: str) -> bool:
         return True
     except (ZoneInfoNotFoundError, ValueError):
         return False
+
+
+def _zone_key(text: str) -> str:
+    """Compare place names without accents, case, spaces or punctuation."""
+    decomposed = unicodedata.normalize("NFKD", text)
+    letters = "".join(c for c in decomposed if not unicodedata.combining(c))
+    return re.sub(r"[^a-z0-9]+", "", letters.casefold())
+
+
+@lru_cache(maxsize=1)
+def _zones_by_city() -> Dict[str, str]:
+    """Last segment of each canonical IANA zone ("Sao_Paulo") -> the zone.
+
+    A city segment shared by zones that keep different clocks is left out, so
+    a match never picks the wrong offset; aliases of one clock collapse to the
+    shortest name.
+    """
+    if available_timezones is None:
+        return {}
+    found: Dict[str, Optional[str]] = {}
+    for zone in sorted(available_timezones(), key=lambda z: (len(z), z)):
+        region, _, city = zone.partition("/")
+        if not city or region in ("Etc", "SystemV", "US", "Canada", "Brazil", "Mexico", "Chile"):
+            continue
+        key = _zone_key(city.rsplit("/", 1)[-1])
+        if not key:
+            continue
+        if key not in found:
+            found[key] = zone
+        elif found[key] is not None and not _same_clock(found[key], zone):
+            found[key] = None
+    return {key: zone for key, zone in found.items() if zone}
+
+
+def _same_clock(first: str, second: str) -> bool:
+    """True when two zones show the same offset in January and July."""
+    from datetime import datetime
+    try:
+        zones = (ZoneInfo(first), ZoneInfo(second))
+    except (ZoneInfoNotFoundError, ValueError):
+        return False
+    year = datetime.now().year
+    return all(
+        datetime(year, month, 15, 12, tzinfo=zones[0]).utcoffset()
+        == datetime(year, month, 15, 12, tzinfo=zones[1]).utcoffset()
+        for month in (1, 7)
+    )
+
+
+def _offline_zone(location: str) -> Optional[str]:
+    """IANA zone named after a city ("São Paulo" -> America/Sao_Paulo), offline."""
+    return _zones_by_city().get(_zone_key(location.split(",")[0]))
 
 
 def _geocode_timezone(location: str, timeout_sec: float) -> Tuple[Optional[str], str]:
@@ -94,6 +152,23 @@ def _geocode_timezone(location: str, timeout_sec: float) -> Tuple[Optional[str],
     result = (place.get("timezone"), display)
     _geocode_cache[key] = result
     return result
+
+
+def _local_zone(context: ToolContext) -> Optional[str]:
+    """The user's own zone: GeoIP when available, else None (the OS zone)."""
+    if context.cfg is None:
+        return None
+    try:
+        _, tz_name = get_location_context_with_timezone(
+            config_ip=getattr(context.cfg, "location_ip_address", None),
+            auto_detect=getattr(context.cfg, "location_auto_detect", True),
+            resolve_cgnat_public_ip=getattr(context.cfg, "location_cgnat_resolve_public_ip", True),
+            location_cache_minutes=getattr(context.cfg, "location_cache_minutes", 60),
+        )
+        return tz_name
+    except Exception as e:
+        debug_log(f"getTime: local tz lookup failed: {e}", "tools")
+        return None
 
 
 class TimeTool(Tool):
@@ -147,16 +222,30 @@ class TimeTool(Tool):
 
         try:
             if location_str:
+                offline_zone = None if _is_valid_iana_zone(location_str) else _offline_zone(location_str)
                 if _is_valid_iana_zone(location_str):
                     tz_name = location_str.strip()
                     display = tz_name
+                elif offline_zone is not None:
+                    # The place names a time zone itself; no lookup needed.
+                    tz_name, display = offline_zone, location_str
                 elif not network_tools_enabled(context.cfg):
-                    # Resolving a place name needs the geocoding service.
+                    # Resolving any other place needs the geocoding service. Give
+                    # the user's own time instead, clearly labelled, so a small
+                    # model can still answer (most places a user names share
+                    # their zone) without claiming the place's time is known.
                     debug_log("getTime: city lookup refused, network tools are off", "tools")
                     context.user_print("🔒 City lookup blocked: network tools are turned off")
-                    return network_disabled_result(
-                        f"Looking up the time zone of '{location_str}' (an IANA zone "
-                        "such as America/Sao_Paulo works offline)"
+                    local_time = format_time_context(_local_zone(context))
+                    return ToolExecutionResult(
+                        success=True,
+                        reply_text=(
+                            f"The time zone of '{location_str}' cannot be looked up offline "
+                            "(network tools are off), so its time is not confirmed. "
+                            f"The user's own local time is: {local_time}. Tell the user "
+                            "this local time and, in the same sentence, that the time "
+                            f"zone of '{location_str}' could not be checked offline."
+                        ),
                     )
                 else:
                     tz_name, display = _geocode_timezone(location_str, timeout_sec)
@@ -184,25 +273,8 @@ class TimeTool(Tool):
                     reply_text=f"Current time in {display}: {time_str}",
                 )
 
-            # No location — the user's own local time. Prefer the GeoIP zone
-            # when available; format_time_context falls back to the OS zone.
-            tz_name: Optional[str] = None
-            if context.cfg is not None:
-                try:
-                    _, tz_name = get_location_context_with_timezone(
-                        config_ip=getattr(context.cfg, "location_ip_address", None),
-                        auto_detect=getattr(context.cfg, "location_auto_detect", True),
-                        resolve_cgnat_public_ip=getattr(
-                            context.cfg, "location_cgnat_resolve_public_ip", True
-                        ),
-                        location_cache_minutes=getattr(
-                            context.cfg, "location_cache_minutes", 60
-                        ),
-                    )
-                except Exception as e:
-                    debug_log(f"getTime: local tz lookup failed: {e}", "tools")
-                    tz_name = None
-            time_str = format_time_context(tz_name)
+            # No location — the user's own local time.
+            time_str = format_time_context(_local_zone(context))
             context.user_print(f"✅ Current time: {time_str}")
             return ToolExecutionResult(
                 success=True,
