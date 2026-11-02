@@ -1,5 +1,5 @@
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Optional, Dict, Any, Tuple, List
 import threading
 import sys
@@ -23,6 +23,7 @@ from .types import ToolExecutionResult
 from ..config import Settings
 from .external.mcp_client import MCPClient
 from ..debug import debug_log
+from ..utils.redact import scrub_secrets
 
 
 # Registry of all builtin tools
@@ -290,6 +291,20 @@ def generate_tools_description(allowed_tools: Optional[List[str]] = None, mcp_to
     return "\n".join(lines)
 
 
+def _scrub_tool_result(result: ToolExecutionResult) -> ToolExecutionResult:
+    """Mask secrets in what a tool returns before it reaches the model.
+
+    Tools read files, web pages and MCP servers whose text can hold
+    credentials. Structure (line breaks, length) is kept; only secrets change.
+    """
+    reply = scrub_secrets(result.reply_text) if result.reply_text else result.reply_text
+    error = scrub_secrets(result.error_message) if result.error_message else result.error_message
+    if reply == result.reply_text and error == result.error_message:
+        return result
+    debug_log("secrets masked in a tool result", "tools")
+    return replace(result, reply_text=reply, error_message=error)
+
+
 def run_tool_with_retries(
     db,
     cfg: Settings,
@@ -301,6 +316,24 @@ def run_tool_with_retries(
     max_retries: int = 1,
     language: Optional[str] = None,
     transcript_context: str = "",
+) -> ToolExecutionResult:
+    return _scrub_tool_result(_run_tool(
+        db, cfg, tool_name, tool_args, system_prompt, original_prompt,
+        redacted_text, max_retries, language, transcript_context,
+    ))
+
+
+def _run_tool(
+    db,
+    cfg: Settings,
+    tool_name: str,
+    tool_args: Optional[Dict[str, Any]],
+    system_prompt: str,
+    original_prompt: str,
+    redacted_text: str,
+    max_retries: int,
+    language: Optional[str],
+    transcript_context: str,
 ) -> ToolExecutionResult:
     # Normalize tool name to canonical camelCase
     raw_name = (tool_name or "").strip()
