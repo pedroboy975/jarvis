@@ -77,3 +77,31 @@ def test_shared_names_with_different_clocks_are_left_out(monkeypatch):
         assert time_tool._offline_zone("Tokyo") == "Asia/Tokyo"
     finally:
         time_tool._zones_by_city.cache_clear()
+
+
+def test_local_time_skips_geoip_when_location_is_off(monkeypatch):
+    def refuse(**kwargs):
+        raise AssertionError("GeoIP was consulted with location_enabled false")
+
+    monkeypatch.setattr(time_tool, "get_location_context_with_timezone", refuse)
+
+    result = run_tool_with_retries(db=None, cfg=_cfg(), tool_name="getTime", tool_args={},
+                                   system_prompt="", original_prompt="", redacted_text="",
+                                   max_retries=0)
+
+    assert result.success is True
+    assert result.reply_text.startswith("Current time:")
+
+
+def test_local_time_still_uses_geoip_when_location_is_on(monkeypatch):
+    calls = []
+    monkeypatch.setattr(time_tool, "get_location_context_with_timezone",
+                        lambda **kwargs: calls.append(kwargs) or ("Location: Paris", "Europe/Paris"))
+    cfg = _cfg()
+    cfg.location_enabled = True
+
+    result = run_tool_with_retries(db=None, cfg=cfg, tool_name="getTime", tool_args={},
+                                   system_prompt="", original_prompt="", redacted_text="",
+                                   max_retries=0)
+
+    assert calls and result.success is True
