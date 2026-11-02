@@ -209,6 +209,20 @@ Builtin tools that reach the internet stay off until you allow them: `webSearch`
 
 `web_search_enabled` and `wikipedia_fallback_enabled` still apply once network tools are on. MCP servers follow their own configuration.
 
+## Usage Log
+
+Record how often you use Jarvis and how long you wait, without saving what was said. Each spoken request adds one line with timings and the outcome to `usage_log.jsonl`, next to the database:
+
+```json
+{ "usage_log_enabled": true }
+```
+
+See the totals per day (requests, failures, median and worst wait from releasing the push-to-talk key to the start of the answer):
+
+```bash
+python -m jarvis.usage_log
+```
+
 ## Persona
 
 Jarvis answers as a dry, witty butler: each casual answer ends with one short remark. Small models sometimes invent facts to fill that remark. Turn it off for plain answers that stop once the question is answered. Plain answers are also kept short — one sentence when it suffices, only the detail asked for — because every spoken word is waiting time:

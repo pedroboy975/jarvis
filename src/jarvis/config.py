@@ -196,6 +196,8 @@ class Settings:
     whisper_language: str
     # CPU threads for faster-whisper (0 = every logical core)
     whisper_cpu_threads: int
+    # Append per-request timings (no words) to usage_log.jsonl beside the database
+    usage_log_enabled: bool
 
     # Voice Activity Detection (VAD)
     vad_enabled: bool
@@ -678,6 +680,10 @@ def get_default_config() -> Dict[str, Any]:
         # hybrid CPUs the efficiency cores can slow transcription down; the
         # number of performance cores is usually faster.
         "whisper_cpu_threads": 0,
+        # Usage metrics: one JSON line per spoken request in usage_log.jsonl
+        # beside the database, with timings and outcome only (never the words).
+        # Report: python -m jarvis.usage_log
+        "usage_log_enabled": False,
 
         # Voice Activity Detection (VAD)
         "vad_enabled": True,
@@ -1005,6 +1011,7 @@ def load_settings() -> Settings:
     whisper_min_audio_duration = float(merged.get("whisper_min_audio_duration", 0.3))
     whisper_language = _normalise_whisper_language(merged.get("whisper_language"), warn=True)
     whisper_cpu_threads = _normalise_thread_count(merged.get("whisper_cpu_threads"))
+    usage_log_enabled = merged.get("usage_log_enabled", False) is True
     llm_chat_timeout_sec = float(merged.get("llm_chat_timeout_sec", 180.0))
     llm_tools_timeout_sec = float(merged.get("llm_tools_timeout_sec", 300.0))
     llm_digest_timeout_sec = float(merged.get("llm_digest_timeout_sec", 8.0))
@@ -1081,6 +1088,7 @@ def load_settings() -> Settings:
         whisper_min_audio_duration=whisper_min_audio_duration,
         whisper_language=whisper_language,
         whisper_cpu_threads=whisper_cpu_threads,
+        usage_log_enabled=usage_log_enabled,
 
         # Voice Activity Detection (VAD)
         vad_enabled=vad_enabled,

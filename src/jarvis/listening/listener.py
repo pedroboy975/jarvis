@@ -36,6 +36,7 @@ from .intent_judge import (
 from ..config import whisper_cpu_thread_count, whisper_language_code
 from ..debug import debug_log
 from ..llm import get_embedding_backend
+from ..usage_log import RequestTiming, now as usage_now, write_timing
 from ..utils.location import is_location_available
 
 if TYPE_CHECKING:
@@ -1037,7 +1038,8 @@ class VoiceListener(threading.Thread):
         else:
             debug_log(f"input ignored (no wake word{intent_info}): {text_lower}", "voice")
 
-    def dispatch_push_to_talk(self, query: str, *, language: Optional[str] = None) -> None:
+    def dispatch_push_to_talk(self, query: str, *, language: Optional[str] = None,
+                              timing: Optional["RequestTiming"] = None) -> None:
         """Answer speech the user addressed to Jarvis by holding the push-to-talk key.
 
         Holding the key is an explicit request, so the query is answered even
@@ -1050,10 +1052,12 @@ class VoiceListener(threading.Thread):
         print(f"\n{'─' * 50}\n📝 Heard (push-to-talk): \"{query.strip()}\"", flush=True)
         debug_log("push-to-talk query received", "voice")
         self._dispatch_query(query.strip(), language=language,
-                             generation=self._capture_generation, explicit=True)
+                             generation=self._capture_generation, explicit=True,
+                             timing=timing)
 
     def _dispatch_query(self, query: str, *, language: Optional[str], generation: int,
-                        explicit: bool = False) -> None:
+                        explicit: bool = False,
+                        timing: Optional["RequestTiming"] = None) -> None:
         """
         Dispatch a complete query to the reply engine.
 
@@ -1094,7 +1098,18 @@ class VoiceListener(threading.Thread):
         )
         transferred = False
 
+        # Usage metrics: timings only, written once per request when enabled.
+        if timing is None:
+            timing = RequestTiming(source="push_to_talk" if explicit else "ambient",
+                                   started=usage_now())
+
+        def on_voice_start(speech_seconds):
+            timing.voice = usage_now()
+            timing.speech_seconds = speech_seconds
+            write_timing(self.cfg, timing)
+
         def release_query(outcome=None):
+            write_timing(self.cfg, timing)
             if owner is not None:
                 released = manager.release_state(owner)
                 debug_log(f'Voice thinking cleanup: released={released}', 'voice')
@@ -1121,6 +1136,8 @@ class VoiceListener(threading.Thread):
                 debug_log(f'Reply engine exception: {exc}', 'voice')
                 failed = True
                 reply = 'Sorry, I encountered an error processing your request.'
+            timing.replied = usage_now()
+            timing.ok = not failed
 
             self._stop_thinking_tune()
             if not is_current():
@@ -1129,6 +1146,7 @@ class VoiceListener(threading.Thread):
             if reply and self.tts is not None and self.tts.enabled:
                 debug_log(f'Queueing voice output ({len(reply)} chars)', 'voice')
                 self.tts.speak(reply, completion_callback=None if failed else on_complete,
+                               duration_callback=on_voice_start,
                                terminal_callback=release_query)
                 transferred = True
         finally:
