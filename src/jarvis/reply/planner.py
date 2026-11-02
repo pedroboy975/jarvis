@@ -421,6 +421,33 @@ def tool_names_in_plan(
     return out
 
 
+# A step written as a tool call: an identifier followed by arguments, as in
+# "deleteNote id='x'" or "deleteNote(...)". Plain prose ("get the weather")
+# does not match, so paraphrased steps stay with the router fallback.
+_CALL_SHAPED_STEP = re.compile(
+    r"^\s*([A-Za-z_][A-Za-z0-9_]*)(?=\s*\(|\s+[A-Za-z_][A-Za-z0-9_]*\s*=)"
+)
+
+
+def invented_tool_names(
+    plan: Sequence[str], known_names: Sequence[str],
+) -> List[str]:
+    """Tool names a plan calls that are not in the available catalogue.
+
+    Small planners sometimes write a call to a tool that does not exist
+    (``deleteNote id='x'``) and then a synthesis step that presumes it
+    worked. Nothing can execute such a step, so the engine must treat it
+    as unexecuted rather than as a task list to narrate.
+    """
+    known = set(known_names or ())
+    seen: List[str] = []
+    for step in tool_steps_of(plan):
+        match = _CALL_SHAPED_STEP.match(step)
+        if match and match.group(1) not in known and match.group(1) not in seen:
+            seen.append(match.group(1))
+    return seen
+
+
 def plan_has_unresolved_tool_steps(
     plan: Sequence[str], known_names: Sequence[str],
 ) -> bool:

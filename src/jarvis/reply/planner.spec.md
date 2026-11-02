@@ -187,6 +187,14 @@ The engine consumes the plan in two phases.
   tool names the planner referenced. The engine unions this into the
   router-selected allow-list (never replaces it). `stop` and
   `toolSearchTool` are always added regardless.
+- `invented_tool_names(plan, known_names)` — tool names that call-shaped
+  non-synthesis steps use but the catalogue lacks: an identifier followed by
+  arguments (`deleteNote id='x'` or `deleteNote(...)`). Prose steps such as
+  `get the weather` do not match. The catalogue already excludes disabled and
+  gated network tools, so a plan calling one of them counts as invented. When
+  any are found the reply starts in recovery (see below): such a step can
+  never execute, and the synthesis step written after it usually presumes it
+  succeeded.
 - `plan_has_unresolved_tool_steps(plan, known_names)` — true when the
   plan has non-synthesis steps but names no known tool (e.g. the
   model wrote `get the weather` instead of `getWeather ...`). In
@@ -218,6 +226,11 @@ The engine consumes the plan in two phases.
   the tool directly, bypassing the chat model for that turn. This
   keeps small models on-rails without relying on their native
   tool-call reliability.
+- A plan with invented tool calls enters recovery before the first turn. The
+  reply model sees an execution record naming the unavailable tools, stating
+  that their steps were not executed and that no tool result supports them,
+  instead of the `ACTION PLAN` block. Direct execution is skipped and the
+  completion-evidence rules below apply.
 - An unresolved, rejected or failed step-resolution attempt hands unfinished
   task decisions to the reply model for the remainder of that reply. A missing
   concrete call is not an execution result. Recovery includes a snapshot of
