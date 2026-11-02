@@ -4,6 +4,15 @@ $ErrorActionPreference = 'Stop'
 
 function Write-Info($msg) { Write-Host "[jarvis] $msg" }
 
+# Native commands do not honour $ErrorActionPreference, so check each step
+# and stop instead of launching a daemon whose dependencies never installed.
+function Assert-Step($what) {
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "[jarvis] $what failed (exit code $LASTEXITCODE). Fix the error above and run this script again." -ForegroundColor Red
+    exit 1
+  }
+}
+
 # Repo root
 $SCRIPT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
 $REPO_ROOT = Resolve-Path (Join-Path $SCRIPT_DIR '..')
@@ -11,6 +20,10 @@ Set-Location $REPO_ROOT
 
 # Helper to set env vars for the current process
 $env:PYTHONPATH = Join-Path $REPO_ROOT 'src'
+# Keep packages from %APPDATA%\Python (pip --user) out of Jarvis's environment.
+# The user site sits ahead of the environment on sys.path, so a package there
+# would shadow the pinned version and pip would count it as already installed.
+$env:PYTHONNOUSERSITE = '1'
 if (-not $env:JARVIS_VOICE_DEBUG) { $env:JARVIS_VOICE_DEBUG = '0' }
 
 # Prefer micromamba for pre-built dependencies (webrtcvad, av, etc.)
@@ -22,13 +35,19 @@ if ($micromamba) {
   if (-not (Test-Path $envPrefix)) {
     Write-Info 'Creating environment (python 3.12)...'
     micromamba create -y -p $envPrefix python=3.12 -c conda-forge
+    Assert-Step 'Creating the Micromamba environment'
   }
 
-  Write-Info 'Installing PyAV (FFmpeg bindings) from conda-forge...'
-  micromamba install -y -p $envPrefix -c conda-forge av
+  # webrtcvad has no Windows wheel on PyPI; without the conda-forge build pip
+  # compiles it and needs Microsoft C++ Build Tools. Keep the version in step
+  # with requirements.txt so pip treats it as already installed.
+  Write-Info 'Installing PyAV and webrtcvad (pre-built) from conda-forge...'
+  micromamba install -y -p $envPrefix -c conda-forge av webrtcvad=2.0.10
+  Assert-Step 'Installing PyAV and webrtcvad from conda-forge'
 
   Write-Info 'Installing Python requirements with pip...'
   micromamba run -p $envPrefix pip install -r requirements.txt
+  Assert-Step 'Installing Python requirements'
 
   # Prefer launching python.exe directly so Ctrl+C propagates to the child on Windows
   $envPython = Join-Path $envPrefix 'python.exe'
@@ -52,10 +71,12 @@ Write-Info "Micromamba not found, using regular Python (may need Visual C++ Buil
 if (-not (Test-Path $venvPython)) {
   Write-Info 'Creating virtual environment (.venv)...'
   python -m venv $venvPath
+  Assert-Step 'Creating the virtual environment'
 }
 
 Write-Info 'Installing Python requirements with pip...'
 & $venvPython -m pip install -r requirements.txt
+Assert-Step 'Installing Python requirements'
 
 Write-Info 'Starting daemon...'
 & $venvPython -m jarvis.daemon
