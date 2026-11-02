@@ -1082,6 +1082,10 @@ def _run_daemon(smoke_test: bool = False) -> None:
     )
     voice_thread.start()
     _global_voice_listener = voice_thread
+    if bool(getattr(cfg, "voice_listening_start_paused", False)):
+        voice_thread.set_capture_paused('user', True)
+        print("⏸️ Voice listening starts paused (resume from the tray menu)", flush=True)
+        debug_log("ambient listening paused at startup", "voice")
 
     # Initialize dictation engine (hold-to-dictate)
     dictation = None
@@ -1144,6 +1148,55 @@ def _run_daemon(smoke_test: bool = False) -> None:
     else:
         print("🎙️ Dictation disabled", flush=True)
 
+    # Push-to-talk: hold a hotkey, speak, release; the transcript goes to Jarvis.
+    push_to_talk = None
+    push_to_talk_hotkey = str(getattr(cfg, "push_to_talk_hotkey", "") or "").strip()
+    if push_to_talk_hotkey:
+        try:
+            from .dictation.dictation_engine import DictationEngine as _PTT, format_hotkey_display
+
+            def _on_push_to_talk_start():
+                voice_thread.set_capture_paused('push_to_talk', True)
+                try:
+                    from jarvis.activity import JarvisState, get_jarvis_state
+                    get_jarvis_state().set_state(JarvisState.LISTENING)
+                except Exception:
+                    pass
+                debug_log("push-to-talk recording started", "voice")
+
+            def _on_push_to_talk_end():
+                voice_thread.set_capture_paused('push_to_talk', False)
+                debug_log("push-to-talk recording ended", "voice")
+
+            def _deliver_push_to_talk(text: str) -> None:
+                threading.Thread(
+                    target=voice_thread.dispatch_push_to_talk, args=(text,),
+                    name="jarvis-push-to-talk", daemon=True,
+                ).start()
+
+            push_to_talk = _PTT(
+                whisper_model_ref=lambda: voice_thread.model,
+                whisper_backend_ref=lambda: voice_thread._whisper_backend,
+                mlx_repo_ref=lambda: voice_thread._mlx_model_repo,
+                hotkey=push_to_talk_hotkey,
+                sample_rate=int(getattr(cfg, "sample_rate", 16000)),
+                on_dictation_start=_on_push_to_talk_start,
+                on_dictation_end=_on_push_to_talk_end,
+                transcribe_lock=voice_thread.transcribe_lock,
+                voice_device=getattr(cfg, "voice_device", None),
+                custom_dictionary=getattr(cfg, "dictation_custom_dictionary", []),
+                cfg=cfg,
+                deliver=_deliver_push_to_talk,
+                record_history=False,
+            )
+            push_to_talk.start()
+            if push_to_talk._started:
+                print(f"🗣️ Push-to-talk enabled (hold {format_hotkey_display(push_to_talk_hotkey)} to talk to Jarvis)",
+                      flush=True)
+        except Exception as e:
+            debug_log(f"push-to-talk init failed: {e}", "voice")
+            print(f"  ⚠ Push-to-talk not available: {e}", flush=True)
+
     if smoke_test:
         request_stop()
         print("SMOKE_TEST_INIT_OK", flush=True)
@@ -1151,11 +1204,12 @@ def _run_daemon(smoke_test: bool = False) -> None:
 
         # Clean shutdown: stop engines, close database, tear down MCP runtime.
         # The caller is responsible for printing SMOKE_TEST_PASSED / FAILED.
-        if dictation is not None:
-            try:
-                dictation.stop()
-            except Exception:
-                pass
+        for hotkey_engine in (dictation, push_to_talk):
+            if hotkey_engine is not None:
+                try:
+                    hotkey_engine.stop()
+                except Exception:
+                    pass
 
         if voice_thread is not None:
             try:
@@ -1290,6 +1344,9 @@ def _run_daemon(smoke_test: bool = False) -> None:
             debug_log("stopping dictation engine...", "jarvis")
             dictation.stop()
             debug_log("dictation engine stopped", "jarvis")
+        if push_to_talk is not None:
+            push_to_talk.stop()
+            debug_log("push-to-talk engine stopped", "jarvis")
 
         if voice_thread is not None:
             debug_log("stopping voice thread...", "jarvis")

@@ -92,6 +92,8 @@ class MockConfig:
     stop_commands: list = field(default_factory=lambda: get_default_config()["stop_commands"])
     stop_command_fuzzy_ratio: float = field(default_factory=lambda: get_default_config()["stop_command_fuzzy_ratio"])
     dictation_hotkey: str = "ctrl+alt+space"
+    voice_listening_start_paused: bool = False
+    push_to_talk_hotkey: str = ""
     mcps: Dict[str, Any] = field(default_factory=dict)
     use_stdin: bool = True
 

@@ -72,6 +72,7 @@ For an experimental 27B alternative, see the [Bonsai 2 local setup guide](docs/B
 - **Remember beyond one session.** Ask about past conversations, preferences and plans. Browse your local diary and knowledge graph in the Memory Viewer.
 - **Get things done.** Built-in tools cover web search, weather, time, screenshot OCR, file access, nutrition tracking and optional location awareness.
 - **Connect your own tools.** MCP servers add browser automation, smart-home controls and other integrations.
+- **Push to talk.** Voice listening starts paused. Hold Alt + Win, speak and release, and Jarvis answers out loud without listening to the rest of the room. [Settings →](docs/CONFIGURATION.md#push-to-talk-and-ambient-listening)
 - **Dictate into other apps.** Hold a hotkey, speak, then release to paste locally transcribed text. See the [platform limitations](#known-limitations) first.
 - **Type when you need to.** The companion chat shares your voice conversation and memory. Text replies are silent, and you can rewind a sent message to regenerate from that point.
 - **Queue work locally.** Submit prompts from the Task Centre, follow their results and cancel requests.

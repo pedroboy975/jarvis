@@ -1036,15 +1036,35 @@ class VoiceListener(threading.Thread):
         else:
             debug_log(f"input ignored (no wake word{intent_info}): {text_lower}", "voice")
 
-    def _dispatch_query(self, query: str, *, language: Optional[str], generation: int) -> None:
+    def dispatch_push_to_talk(self, query: str, *, language: Optional[str] = None) -> None:
+        """Answer speech the user addressed to Jarvis by holding the push-to-talk key.
+
+        Holding the key is an explicit request, so the query is answered even
+        while ambient capture is paused.
+        """
+        if not isinstance(query, str) or not query.strip():
+            return
+        debug_log("push-to-talk query received", "voice")
+        self._dispatch_query(query.strip(), language=language,
+                             generation=self._capture_generation, explicit=True)
+
+    def _dispatch_query(self, query: str, *, language: Optional[str], generation: int,
+                        explicit: bool = False) -> None:
         """
         Dispatch a complete query to the reply engine.
 
         Args:
             query: Complete user query to process
             language: Detected language captured with this accepted query
+            explicit: True for push-to-talk, which stays current while
+                ambient capture is paused
         """
-        if not self._transcription_is_current(generation):
+        def is_current() -> bool:
+            if explicit:
+                return not self._should_stop
+            return self._transcription_is_current(generation)
+
+        if not is_current():
             return
         debug_log(f"dispatching query (language: {language}): '{query}'", "voice")
         from .speech_context import SpeechContext
@@ -1077,7 +1097,7 @@ class VoiceListener(threading.Thread):
 
         def on_complete():
             with self._audio_state_lock:
-                if self._transcription_is_current(generation):
+                if is_current():
                     self.activate_hot_window()
 
         try:
@@ -1085,7 +1105,7 @@ class VoiceListener(threading.Thread):
             try:
                 # Voice and text share one conversation and reply-engine lock.
                 with query_lock():
-                    if not self._transcription_is_current(generation):
+                    if not is_current():
                         debug_log('Discarded voice dispatch after query-lock wait', 'voice')
                         return
                     reply = run_reply_engine(
@@ -1099,7 +1119,7 @@ class VoiceListener(threading.Thread):
                 reply = 'Sorry, I encountered an error processing your request.'
 
             self._stop_thinking_tune()
-            if not self._transcription_is_current(generation):
+            if not is_current():
                 debug_log('Discarded voice reply after generation invalidation', 'voice')
                 return
             if reply and self.tts is not None and self.tts.enabled:

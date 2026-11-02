@@ -77,6 +77,17 @@ def get_supported_model_ids() -> set[str]:
     return set(SUPPORTED_CHAT_MODELS.keys())
 
 
+def _default_push_to_talk_hotkey() -> str:
+    """Return the default push-to-talk hotkey.
+
+    Alt plus the system key (Win on Windows, Option plus Cmd on macOS,
+    Alt plus Super on Linux). It shares no full combination with the
+    dictation default, so holding one never triggers the other, and it
+    avoids Ctrl+Alt, which Windows reads as AltGr while typing.
+    """
+    return "alt+cmd"
+
+
 def _default_dictation_hotkey() -> str:
     """Return the platform-appropriate default dictation hotkey.
 
@@ -284,6 +295,10 @@ class Settings:
     # Dictation (hold-to-dictate)
     dictation_enabled: bool
     dictation_hotkey: str
+
+    # Ambient listening and push-to-talk
+    voice_listening_start_paused: bool
+    push_to_talk_hotkey: str
     dictation_filler_removal: bool
     dictation_thinking_enabled: bool
     dictation_custom_dictionary: list
@@ -673,6 +688,11 @@ def get_default_config() -> Dict[str, Any]:
         # Dictation (hold-to-dictate, WisprFlow-like)
         "dictation_enabled": True,
         "dictation_hotkey": _default_dictation_hotkey(),
+
+        # Ambient listening starts paused; holding the push-to-talk hotkey
+        # sends speech straight to Jarvis. Empty hotkey disables push-to-talk.
+        "voice_listening_start_paused": True,
+        "push_to_talk_hotkey": _default_push_to_talk_hotkey(),
         "dictation_filler_removal": False,
         "dictation_thinking_enabled": False,  # Enable thinking for dictation filler removal (adds latency)
         "dictation_custom_dictionary": [],
@@ -881,6 +901,8 @@ def load_settings() -> Settings:
     wikipedia_fallback_enabled = bool(merged.get("wikipedia_fallback_enabled", True))
     dictation_enabled = bool(merged.get("dictation_enabled", True))
     dictation_hotkey = str(merged.get("dictation_hotkey", _default_dictation_hotkey())).strip()
+    voice_listening_start_paused = bool(merged.get("voice_listening_start_paused", True))
+    push_to_talk_hotkey = str(merged.get("push_to_talk_hotkey", _default_push_to_talk_hotkey()) or "").strip()
     dictation_filler_removal = bool(merged.get("dictation_filler_removal", False))
     raw_dict = merged.get("dictation_custom_dictionary", [])
     dictation_custom_dictionary = list(raw_dict) if isinstance(raw_dict, list) else []
@@ -1018,6 +1040,8 @@ def load_settings() -> Settings:
         # Dictation
         dictation_enabled=dictation_enabled,
         dictation_hotkey=dictation_hotkey,
+        voice_listening_start_paused=voice_listening_start_paused,
+        push_to_talk_hotkey=push_to_talk_hotkey,
         dictation_filler_removal=dictation_filler_removal,
         dictation_thinking_enabled=bool(merged["dictation_thinking_enabled"]),
         dictation_custom_dictionary=dictation_custom_dictionary,

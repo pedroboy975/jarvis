@@ -2477,14 +2477,25 @@ class JarvisSystemTray:
         if not active or owner is not self._voice_pause_owner:
             self._voice_pause_timer.stop()
             self._voice_pause_request_id = None
-            self._voice_pause_state = False
+            # A new daemon applies the configured start-paused setting itself.
+            self._voice_pause_state = active and self._voice_starts_paused()
             self._voice_pause_owner = owner if active else None
-            self.voice_pause_action.setText("⏸️ Pause Voice Listening")
+            self.voice_pause_action.setText("▶️ Resume Voice Listening" if self._voice_pause_state
+                                            else "⏸️ Pause Voice Listening")
             if active:
-                self.status_action.setText("🟢 Status: Listening")
+                self.status_action.setText("🟠 Status: Voice paused (chat available)" if self._voice_pause_state
+                                           else "🟢 Status: Listening")
             elif not self.is_listening:
                 self.status_action.setText("⚪ Status: Stopped")
         self.voice_pause_action.setEnabled(active and self._voice_pause_request_id is None)
+
+    @staticmethod
+    def _voice_starts_paused() -> bool:
+        try:
+            from jarvis.config import load_settings
+            return bool(getattr(load_settings(), "voice_listening_start_paused", False))
+        except Exception:
+            return False
 
     def toggle_voice_pause(self) -> None:
         import json

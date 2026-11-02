@@ -44,7 +44,7 @@ class LocalFilesTool(Tool):
         """Execute the local files tool."""
         try:
             # Safety: every path resolves inside the configured notes folder.
-            configured_root = str(getattr(context.cfg, "local_files_root", None) or "~")
+            configured_root = str(getattr(getattr(context, "cfg", None), "local_files_root", None) or "~")
             home_root = Path(os.path.expanduser(configured_root)).resolve()
 
             def _expand_user_path(p: str) -> str:
