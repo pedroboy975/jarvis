@@ -27,9 +27,13 @@ _REDACTION_RULES: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\b(?:eyJ[0-9A-Za-z._\-]+)\b"), "[REDACTED_JWT]"),
     # Keyword-anchored credentials. Covers refresh/access/oauth/session
     # variants in addition to the original pass/secret/token/apikey set.
+    # Environment-style names count too: OLLAMA_EMBEDDING_PASS, PROXY_LLM_TOKEN
+    # and BRAVE_API_KEY carry the same secret as their bare keyword. A bare
+    # "key" stays ordinary text; only an underscore-prefixed *_KEY is masked.
     (re.compile(
-        r"\b(pass(?:word)?|secret|token|apikey|api_key|"
+        r"\b((?:[A-Za-z0-9]+_)*(?:pass(?:word|wd)?|secret|token|apikey|api_key|"
         r"(?:refresh|access|id|oauth)_?token|session(?:_?id)?|sid)"
+        r"|(?:[A-Za-z0-9]+_)+key)"
         r"\s*[:=]\s*\S+\b",
         re.IGNORECASE,
     ), r"\1=[REDACTED]"),

@@ -9,8 +9,13 @@ from ..base import Tool, ToolContext
 from ..types import ToolExecutionResult
 
 
+# Text notes are the only files Jarvis creates. Script and executable
+# extensions stay unwritable even inside the notes folder.
+WRITABLE_EXTENSIONS = (".md", ".txt")
+
+
 class LocalFilesTool(Tool):
-    """Tool for safe local file operations within user's home directory."""
+    """Tool for text notes confined to the Jarvis notes folder."""
 
     @property
     def name(self) -> str:
@@ -18,16 +23,17 @@ class LocalFilesTool(Tool):
 
     @property
     def description(self) -> str:
-        return "Safely read, write, list, append, or delete files within your home directory."
+        return ("Read, list, create and append text notes (.md, .txt) in the Jarvis notes folder. "
+                "Never overwrites or deletes a file.")
 
     @property
     def inputSchema(self) -> Dict[str, Any]:
         return {
             "type": "object",
             "properties": {
-                "operation": {"type": "string", "description": "Operation to perform: list, read, write, append, delete"},
-                "path": {"type": "string", "description": "File or directory path (relative to home directory)"},
-                "content": {"type": "string", "description": "Content to write/append (for write/append operations)"},
+                "operation": {"type": "string", "description": "Operation to perform: list, read, write (new note only), append"},
+                "path": {"type": "string", "description": "File or directory path, relative to the Jarvis notes folder"},
+                "content": {"type": "string", "description": "Text to write to a new note or append to an existing note"},
                 "glob": {"type": "string", "description": "Glob pattern for listing (default: *)"},
                 "recursive": {"type": "boolean", "description": "Whether to search recursively (for list operation)"}
             },
@@ -37,15 +43,17 @@ class LocalFilesTool(Tool):
     def run(self, args: Optional[Dict[str, Any]], context: ToolContext) -> ToolExecutionResult:
         """Execute the local files tool."""
         try:
-            # Safety: restrict to user's home directory by default
-            home_root = Path(os.path.expanduser("~")).resolve()
+            # Safety: every path resolves inside the configured notes folder.
+            configured_root = str(getattr(getattr(context, "cfg", None), "local_files_root", None) or "~")
+            home_root = Path(os.path.expanduser(configured_root)).resolve()
 
             def _expand_user_path(p: str) -> str:
                 if p == "~":
                     return os.path.expanduser("~")
                 if p.startswith("~/") or p.startswith("~\\"):
                     return os.path.join(os.path.expanduser("~"), p[2:])
-                return os.path.expanduser(p)
+                expanded = os.path.expanduser(p)
+                return expanded if os.path.isabs(expanded) else str(home_root / expanded)
 
             def _resolve_safe(p: str) -> Path:
                 resolved = Path(_expand_user_path(p)).resolve()
@@ -71,6 +79,20 @@ class LocalFilesTool(Tool):
                 return ToolExecutionResult(success=False, reply_text="localFiles requires 'operation' and 'path'.")
 
             target = _resolve_safe(path_arg)
+
+            if operation == "delete":
+                debug_log("localFiles: delete refused, Jarvis never deletes files", "tools")
+                return ToolExecutionResult(
+                    success=False,
+                    reply_text="Deleting files is not available. Ask the user to delete it themselves.",
+                )
+
+            if operation in ("write", "append") and target.suffix.lower() not in WRITABLE_EXTENSIONS:
+                debug_log(f"localFiles: {operation} refused for a non-note extension", "tools")
+                return ToolExecutionResult(
+                    success=False,
+                    reply_text="Only text notes ending in .md or .txt can be written.",
+                )
 
             # list
             if operation == "list":
@@ -155,6 +177,12 @@ class LocalFilesTool(Tool):
                 content = args.get("content")
                 if not isinstance(content, str):
                     return ToolExecutionResult(success=False, reply_text="Write requires string 'content'.")
+                if target.exists():
+                    debug_log("localFiles: write refused, the note already exists", "tools")
+                    return ToolExecutionResult(
+                        success=False,
+                        reply_text=f"{target.name} already exists. Append to it or choose a new file name.",
+                    )
                 try:
                     target.parent.mkdir(parents=True, exist_ok=True)
                     target.write_text(content, encoding="utf-8")
@@ -174,16 +202,6 @@ class LocalFilesTool(Tool):
                     return ToolExecutionResult(success=True, reply_text=f"Appended {len(content)} characters to {target}")
                 except Exception as e:
                     return ToolExecutionResult(success=False, reply_text=f"Append failed: {e}")
-
-            # delete
-            if operation == "delete":
-                try:
-                    if target.exists() and target.is_file():
-                        target.unlink()
-                        return ToolExecutionResult(success=True, reply_text=f"Deleted file: {target}")
-                    return ToolExecutionResult(success=False, reply_text=f"File not found: {target}")
-                except Exception as e:
-                    return ToolExecutionResult(success=False, reply_text=f"Delete failed: {e}")
 
             return ToolExecutionResult(success=False, reply_text=f"Unknown localFiles operation: {operation}")
         except PermissionError as pe:

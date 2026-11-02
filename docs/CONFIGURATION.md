@@ -166,6 +166,19 @@ Field logs show `🧩 Memory digest: …` and `🧩 Tool digest: …` lines when
 
 </details>
 
+## Push-to-Talk and Ambient Listening
+
+Voice listening starts paused, so Jarvis does not transcribe the room until you resume it from the tray. Hold the push-to-talk hotkey (Alt + Win on Windows, Option + Cmd on macOS, Alt + Super on Linux), speak, and release: Jarvis answers out loud even while listening is paused. Push-to-talk speech is not saved to dictation history.
+
+```json
+{
+  "voice_listening_start_paused": true,
+  "push_to_talk_hotkey": "alt+cmd"
+}
+```
+
+Set `voice_listening_start_paused` to `false` to start with ambient listening, or `push_to_talk_hotkey` to `""` to turn push-to-talk off.
+
 ## Dictation Mode
 
 Hold a hotkey to record speech, release to paste the transcription into your editor, browser or other app. Transcription runs locally.
@@ -217,6 +230,8 @@ To use different Piper voices, download from [HuggingFace](https://huggingface.c
   "tts_piper_model_path": "~/.local/share/jarvis/models/piper/en_GB-alan-medium.onnx"
 }
 ```
+
+Jarvis replies in the language of the configured Piper voice. A Brazilian Portuguese voice such as `pt_BR-faber-medium` makes spoken replies Brazilian Portuguese; it downloads automatically on first use when the path points at the Piper models folder.
 
 **Chatterbox** - AI voice with emotion control (requires running from source):
 ```json

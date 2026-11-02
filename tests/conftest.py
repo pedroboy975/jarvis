@@ -68,6 +68,7 @@ class MockConfig:
     tts_chatterbox_audio_prompt: Optional[str] = None
     tts_chatterbox_exaggeration: float = 0.5
     tts_chatterbox_cfg_weight: float = 0.5
+    local_files_root: str = "~"
     web_search_enabled: bool = True
     brave_search_api_key: str = ""
     wikipedia_fallback_enabled: bool = True
@@ -91,6 +92,8 @@ class MockConfig:
     stop_commands: list = field(default_factory=lambda: get_default_config()["stop_commands"])
     stop_command_fuzzy_ratio: float = field(default_factory=lambda: get_default_config()["stop_command_fuzzy_ratio"])
     dictation_hotkey: str = "ctrl+alt+space"
+    voice_listening_start_paused: bool = False
+    push_to_talk_hotkey: str = ""
     mcps: Dict[str, Any] = field(default_factory=dict)
     use_stdin: bool = True
 

@@ -622,6 +622,11 @@ class DictationEngine:
     on_dictation_result : callable | None
         Called with ``(entry_dict)`` after a successful dictation is saved
         to history. Used by the UI to update the history window.
+    deliver : callable | None
+        Called with the transcript instead of pasting it. Push-to-talk uses
+        it to hand speech to the assistant.
+    record_history : bool
+        Whether transcripts are saved to dictation history.
     """
 
     def __init__(
@@ -643,6 +648,8 @@ class DictationEngine:
         cfg: Any = None,
         chat_model: str = "gemma4:e2b",
         thinking: bool = False,
+        deliver: Optional[Callable[[str], None]] = None,
+        record_history: bool = True,
     ) -> None:
         self._whisper_model_ref = whisper_model_ref
         self._whisper_backend_ref = whisper_backend_ref
@@ -661,6 +668,8 @@ class DictationEngine:
         self._cfg = cfg
         self._chat_model = chat_model
         self._thinking = thinking
+        self._deliver = deliver
+        self._record_history = record_history
 
         # Parse hotkey
         self._modifiers, self._trigger = parse_hotkey(hotkey)
@@ -1147,11 +1156,17 @@ class DictationEngine:
             if text:
                 duration = len(audio) / self._target_sample_rate
                 debug_log(f"dictation result: {text!r}", "dictation")
-                self._paste_in_progress = True
-                try:
-                    _clipboard_paste(text)
-                finally:
-                    self._paste_in_progress = False
+                if self._deliver is not None:
+                    debug_log("transcript delivered instead of pasted", "dictation")
+                    self._deliver(text)
+                else:
+                    self._paste_in_progress = True
+                    try:
+                        _clipboard_paste(text)
+                    finally:
+                        self._paste_in_progress = False
+                if not self._record_history:
+                    return
                 # Persist to history
                 try:
                     entry = self.history.add(text, duration=duration)

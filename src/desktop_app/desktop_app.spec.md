@@ -368,8 +368,9 @@ acknowledgement. Pending requests disable the action. After ten seconds without
 confirmation, or a broken pipe/unavailable capture, it reports an unknown voice
 state and permits a fresh pause attempt. Late identities and events from another
 daemon process cannot affect the current runtime. Shutdown disables the action;
-a replacement daemon begins with unpaused capture. Pause is runtime state and is
-not saved to configuration. The hardware capture stream remains warm while
+a replacement daemon begins with capture paused when `voice_listening_start_paused`
+is set and unpaused otherwise, and the tray starts from that same state. Pausing or
+resuming from the tray is runtime state and is not saved to configuration. The hardware capture stream remains warm while
 assistant input is discarded; this control does not claim to release the device.
 
 ### Task Centre

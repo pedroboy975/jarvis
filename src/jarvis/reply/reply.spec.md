@@ -14,7 +14,7 @@ Design principles enforced by the engine:
 - Unified System Prompt: A single prompt with adaptive guidance handles all topics; no per-profile routing.
 - Tool Response Flow: Tools return raw data; formatting/personality is handled by the LLM through the engine's loop. The system prompt explicitly instructs the model to use tool results to fulfill the user's original request, not to describe the structure or format of the tool response.
 - Language-Agnostic Design: Prompts and ASR guidance avoid language-specific phrasing.
-- Data Privacy: Inputs are redacted and logging is concise and purposeful via `debug_log`.
+- Data Privacy: Inputs are redacted and logging is concise and purposeful via `debug_log`. Every tool result, builtin or MCP, passes through `scrub_secrets` in `run_tool_with_retries` before the model sees it; credential names with environment-style prefixes (`*_PASS`, `*_TOKEN`, `*_KEY`) are masked like their bare keywords.
 
 ### Entry and Inputs
 - Entry point: the reply engine receives a user query from the ingestion layer.

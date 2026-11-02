@@ -118,7 +118,7 @@ def test_local_files_list_and_read(tmp_path):
 
 @pytest.mark.unit
 @pytest.mark.usefixtures("local_files_home")
-def test_local_files_write_append_delete():
+def test_local_files_write_append_refuse_delete():
     db = DummyDB()
     cfg = DummyCfg()
     # write
@@ -161,7 +161,7 @@ def test_local_files_write_append_delete():
     assert res_read.success is True
     assert (res_read.reply_text or "").strip() == "abcdef"
 
-    # delete
+    # delete is refused and the note survives
     res_del = run_tool_with_retries(
         db=db,
         cfg=cfg,
@@ -172,7 +172,18 @@ def test_local_files_write_append_delete():
         redacted_text="",
         max_retries=0,
     )
-    assert res_del.success is True
+    assert res_del.success is False
+    res_after = run_tool_with_retries(
+        db=db,
+        cfg=cfg,
+        tool_name="localFiles",
+        tool_args={"operation": "read", "path": "~/x/y.txt"},
+        system_prompt="",
+        original_prompt="",
+        redacted_text="",
+        max_retries=0,
+    )
+    assert (res_after.reply_text or "").strip() == "abcdef"
 
 
 @pytest.mark.unit

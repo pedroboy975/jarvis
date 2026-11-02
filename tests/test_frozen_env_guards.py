@@ -26,6 +26,7 @@ def test_daemon_launch_mode_controls_synthetic_stdin(monkeypatch, tmp_path, plat
     config.write_text(json.dumps({
         "_config_version": 3, "db_path": str(tmp_path / "synthetic.sqlite"),
         "sqlite_vss_path": None, "tts_enabled": False, "dictation_enabled": False,
+        "voice_listening_start_paused": False, "push_to_talk_hotkey": "",
         "location_enabled": False, "mcps": {}, "embedding_model": "",
         "ollama_embed_model": "", "use_stdin": True,
     }), encoding="utf-8")

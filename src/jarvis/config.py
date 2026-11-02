@@ -77,6 +77,17 @@ def get_supported_model_ids() -> set[str]:
     return set(SUPPORTED_CHAT_MODELS.keys())
 
 
+def _default_push_to_talk_hotkey() -> str:
+    """Return the default push-to-talk hotkey.
+
+    Alt plus the system key (Win on Windows, Option plus Cmd on macOS,
+    Alt plus Super on Linux). It shares no full combination with the
+    dictation default, so holding one never triggers the other, and it
+    avoids Ctrl+Alt, which Windows reads as AltGr while typing.
+    """
+    return "alt+cmd"
+
+
 def _default_dictation_hotkey() -> str:
     """Return the platform-appropriate default dictation hotkey.
 
@@ -264,6 +275,9 @@ class Settings:
     location_auto_detect: bool
     location_cgnat_resolve_public_ip: bool
 
+    # Local files: the notes folder localFiles is confined to
+    local_files_root: str
+
     # Web Search
     web_search_enabled: bool
     # Optional Brave Search API key. When set, Brave is used as the primary
@@ -281,6 +295,10 @@ class Settings:
     # Dictation (hold-to-dictate)
     dictation_enabled: bool
     dictation_hotkey: str
+
+    # Ambient listening and push-to-talk
+    voice_listening_start_paused: bool
+    push_to_talk_hotkey: str
     dictation_filler_removal: bool
     dictation_thinking_enabled: bool
     dictation_custom_dictionary: list
@@ -658,6 +676,10 @@ def get_default_config() -> Dict[str, Any]:
         # Uses a single OpenDNS resolver lookup of myip.opendns.com over DNS (no HTTP services). Disable to avoid any external request.
         "location_cgnat_resolve_public_ip": True,
 
+        # Local files: localFiles reads, lists, creates and appends text notes
+        # only inside this folder. It never overwrites or deletes a file.
+        "local_files_root": "~",
+
         # Web Search
         "web_search_enabled": True,
         "brave_search_api_key": "",
@@ -666,6 +688,11 @@ def get_default_config() -> Dict[str, Any]:
         # Dictation (hold-to-dictate, WisprFlow-like)
         "dictation_enabled": True,
         "dictation_hotkey": _default_dictation_hotkey(),
+
+        # Ambient listening starts paused; holding the push-to-talk hotkey
+        # sends speech straight to Jarvis. Empty hotkey disables push-to-talk.
+        "voice_listening_start_paused": True,
+        "push_to_talk_hotkey": _default_push_to_talk_hotkey(),
         "dictation_filler_removal": False,
         "dictation_thinking_enabled": False,  # Enable thinking for dictation filler removal (adds latency)
         "dictation_custom_dictionary": [],
@@ -868,11 +895,14 @@ def load_settings() -> Settings:
     location_ip_address = None if location_ip_address_val in (None, "", "null") else str(location_ip_address_val)
     location_auto_detect = bool(merged.get("location_auto_detect", True))
     location_cgnat_resolve_public_ip = bool(merged.get("location_cgnat_resolve_public_ip", True))
+    local_files_root = str(merged.get("local_files_root") or "~").strip() or "~"
     web_search_enabled = bool(merged.get("web_search_enabled", True))
     brave_search_api_key = str(merged.get("brave_search_api_key", "") or "").strip()
     wikipedia_fallback_enabled = bool(merged.get("wikipedia_fallback_enabled", True))
     dictation_enabled = bool(merged.get("dictation_enabled", True))
     dictation_hotkey = str(merged.get("dictation_hotkey", _default_dictation_hotkey())).strip()
+    voice_listening_start_paused = bool(merged.get("voice_listening_start_paused", True))
+    push_to_talk_hotkey = str(merged.get("push_to_talk_hotkey", _default_push_to_talk_hotkey()) or "").strip()
     dictation_filler_removal = bool(merged.get("dictation_filler_removal", False))
     raw_dict = merged.get("dictation_custom_dictionary", [])
     dictation_custom_dictionary = list(raw_dict) if isinstance(raw_dict, list) else []
@@ -1000,6 +1030,8 @@ def load_settings() -> Settings:
         location_auto_detect=location_auto_detect,
         location_cgnat_resolve_public_ip=location_cgnat_resolve_public_ip,
 
+        local_files_root=local_files_root,
+
         # Web Search
         web_search_enabled=web_search_enabled,
         brave_search_api_key=brave_search_api_key,
@@ -1008,6 +1040,8 @@ def load_settings() -> Settings:
         # Dictation
         dictation_enabled=dictation_enabled,
         dictation_hotkey=dictation_hotkey,
+        voice_listening_start_paused=voice_listening_start_paused,
+        push_to_talk_hotkey=push_to_talk_hotkey,
         dictation_filler_removal=dictation_filler_removal,
         dictation_thinking_enabled=bool(merged["dictation_thinking_enabled"]),
         dictation_custom_dictionary=dictation_custom_dictionary,

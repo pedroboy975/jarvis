@@ -14,7 +14,8 @@ pytestmark = pytest.mark.unit
 
 
 @pytest.fixture
-def pause_tray(qapp):
+def pause_tray(qapp, monkeypatch):
+    monkeypatch.setattr(JarvisSystemTray, "_voice_starts_paused", staticmethod(lambda: False))
     tray = JarvisSystemTray.__new__(JarvisSystemTray)
     tray.is_bundled = False
     tray.is_listening = True
@@ -151,3 +152,24 @@ def test_voice_acknowledgements_stay_out_of_activity_log():
     from desktop_app.app import _should_emit_as_log
     assert not _should_emit_as_log(daemon.VOICE_STATUS_IPC_PREFIX + '{}')
     assert _should_emit_as_log('🎤 Voice listening resumed.')
+
+
+def test_tray_starts_paused_when_the_daemon_starts_paused(qapp, monkeypatch):
+    monkeypatch.setattr(JarvisSystemTray, "_voice_starts_paused", staticmethod(lambda: True))
+    tray = JarvisSystemTray.__new__(JarvisSystemTray)
+    tray.is_bundled = False
+    tray.is_listening = True
+    tray._daemon_stop_expected = False
+    tray.daemon_thread = None
+    tray.daemon_process = SimpleNamespace(stdin=io.StringIO())
+    tray.log_signals = LogSignals()
+    tray.status_action = QAction('🟢 Status: Listening')
+    tray.tray_icon = Mock()
+    tray._initialise_voice_pause_controls()
+    tray._sync_voice_pause_controls()
+
+    assert tray.voice_pause_action.text() == "▶️ Resume Voice Listening"
+    assert "paused" in tray.status_action.text()
+    tray.toggle_voice_pause()
+    assert request_from(tray)['paused'] is False
+    tray._voice_pause_timer.stop()

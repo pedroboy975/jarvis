@@ -85,6 +85,14 @@ on the serial listener thread before fresh input or collection timeouts are
 processed. Timeout dispatch retains its input generation. Speech completion
 from an invalidated generation cannot schedule a new follow-up window. Models, text chat and intentional dictation remain available; pause
 discards assistant capture without releasing the hardware stream.
+With `voice_listening_start_paused` (default true) the daemon applies the user
+pause at startup, so ambient speech is not transcribed until the user resumes
+listening. Push-to-talk (`push_to_talk_hotkey`, default Alt plus the system key)
+is the explicit path while paused: holding the hotkey records with the shared
+Whisper model under its own `push_to_talk` capture pause reason, and releasing it
+hands the transcript to `dispatch_push_to_talk`. That query is answered with
+speech even while ambient capture is paused; only daemon shutdown discards it.
+Push-to-talk transcripts are not saved to dictation history.
 Callback blocks snapshot the audio generation at callback entry,
 before status bookkeeping, pause checks or sample copies; a reset during
 admission cannot relabel old audio as fresh. Stale blocks

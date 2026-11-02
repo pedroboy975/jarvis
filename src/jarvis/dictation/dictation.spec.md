@@ -25,6 +25,11 @@ from persistence; subsequent successful saves publish their recorded results.
 | `dictation_filler_removal`    | bool   | `false`                                        | LLM-based filler word removal via the configured chat backend        |
 | `dictation_custom_dictionary` | list   | `[]`                                           | Custom replacements in `"wrong -> right"` format|
 
+The engine also serves push-to-talk. Given a `deliver` callback it hands the
+transcript to that callback instead of pasting it, and with `record_history`
+false it saves nothing to dictation history. The daemon runs a second engine on
+`push_to_talk_hotkey` with both options; see `listening.spec.md`.
+
 Defaults are aligned with WisprFlow. Modifier-only combos are supported
 (e.g. `"ctrl+cmd"` activates when both keys are held, with no extra trigger
 key required).
