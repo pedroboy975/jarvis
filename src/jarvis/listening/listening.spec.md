@@ -325,6 +325,18 @@ failed CUDA load or a CUDA transcription failure), it uses `whisper_cpu_threads`
 threads; `0` (default) or anything that is not a positive whole number uses every
 logical core. The same model serves dictation and push-to-talk.
 
+**Usage log:** with `usage_log_enabled` (default `false`), each dispatched
+voice request appends one JSON line to `usage_log.jsonl` beside the database
+(`src/jarvis/usage_log.py`). A line holds the local timestamp, source
+(`push_to_talk` or `ambient`), transcription seconds (push-to-talk: hotkey
+release to transcript), reply seconds, wait from release to the start of speech
+(the TTS duration callback, after synthesis), speech duration and whether the
+reply engine succeeded. It never holds the transcript or the reply. A request is
+written once: at speech start, or at the end of the request when nothing was
+spoken. Write failures are logged at debug level and never interrupt the voice
+path. `python -m jarvis.usage_log` prints requests, failures, median and worst
+wait per day.
+
 **Request locale:** Query collection stores accepted text and the detected language of its latest accepted segment as one immutable value. Clearing collection returns that snapshot and resets both fields. Rejected recognition, TTS echo, interruption-only controls and rejected intent decisions cannot replace a pending request's locale. An accepted segment with unknown language records `None`, which lets tools use their normal locale fallback. Dispatch carries the snapshot's language explicitly through the shared query lock to the reply engine.
 
 ## Rolling Transcript Buffer

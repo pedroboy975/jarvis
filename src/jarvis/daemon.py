@@ -1184,11 +1184,17 @@ def _run_daemon(smoke_test: bool = False) -> None:
                 debug_log("push-to-talk recording ended", "voice")
 
             from .config import whisper_language_code as _whisper_language_code
+            from .usage_log import RequestTiming as _RequestTiming, now as _now
 
             def _deliver_push_to_talk(text: str) -> None:
+                heard = _now()
+                released = getattr(push_to_talk, "last_release_at", None)
+                timing = _RequestTiming(source="push_to_talk",
+                                        started=released if released is not None else heard,
+                                        heard=heard)
                 threading.Thread(
                     target=voice_thread.dispatch_push_to_talk, args=(text,),
-                    kwargs={"language": _whisper_language_code(cfg)},
+                    kwargs={"language": _whisper_language_code(cfg), "timing": timing},
                     name="jarvis-push-to-talk", daemon=True,
                 ).start()
 

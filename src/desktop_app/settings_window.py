@@ -367,6 +367,10 @@ def _build_field_metadata() -> List[FieldMeta]:
     f("low_power_mode", "Low Power Mode",
       "Reduce background LLM residency and skip LLM startup warmup",
       "features", "bool")
+    f("usage_log_enabled", "Usage Log",
+      "Record how long each spoken request took (timings only, never the words) "
+      "in usage_log.jsonl next to the database. Report: python -m jarvis.usage_log",
+      "features", "bool")
     f("persona_asides_enabled", "Witty Asides",
       "End casual answers with a short dry remark (the butler persona). Off "
       "answers plainly and stops; small models sometimes invent facts for the remark.",

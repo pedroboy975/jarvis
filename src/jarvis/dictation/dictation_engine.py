@@ -671,6 +671,9 @@ class DictationEngine:
         self._thinking = thinking
         self._deliver = deliver
         self._record_history = record_history
+        # When the hotkey was last released (monotonic); push-to-talk reads it
+        # to time the wait from release to the spoken answer.
+        self.last_release_at: Optional[float] = None
 
         # Parse hotkey
         self._modifiers, self._trigger = parse_hotkey(hotkey)
@@ -1077,6 +1080,7 @@ class DictationEngine:
                 return
             self._recording = False
             self._hands_free = False
+            self.last_release_at = time.monotonic()
             stream = self._stream
             self._stream = None
             audio_frames = self._audio_frames
