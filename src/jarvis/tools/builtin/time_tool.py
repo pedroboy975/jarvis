@@ -155,8 +155,13 @@ def _geocode_timezone(location: str, timeout_sec: float) -> Tuple[Optional[str],
 
 
 def _local_zone(context: ToolContext) -> Optional[str]:
-    """The user's own zone: GeoIP when available, else None (the OS zone)."""
-    if context.cfg is None:
+    """The user's own zone: GeoIP when available, else None (the OS zone).
+
+    With location_enabled false the GeoIP lookup is skipped: the user turned
+    location off, and the lookup only printed setup instructions for a
+    missing database on every time question.
+    """
+    if context.cfg is None or getattr(context.cfg, "location_enabled", True) is False:
         return None
     try:
         _, tz_name = get_location_context_with_timezone(
