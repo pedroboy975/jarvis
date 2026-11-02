@@ -20,6 +20,10 @@ Set-Location $REPO_ROOT
 
 # Helper to set env vars for the current process
 $env:PYTHONPATH = Join-Path $REPO_ROOT 'src'
+# Keep packages from %APPDATA%\Python (pip --user) out of Jarvis's environment.
+# The user site sits ahead of the environment on sys.path, so a package there
+# would shadow the pinned version and pip would count it as already installed.
+$env:PYTHONNOUSERSITE = '1'
 if (-not $env:JARVIS_VOICE_DEBUG) { $env:JARVIS_VOICE_DEBUG = '0' }
 
 # Prefer micromamba for pre-built dependencies (webrtcvad, av, etc.)
