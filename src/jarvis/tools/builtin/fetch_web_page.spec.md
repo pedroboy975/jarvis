@@ -1,5 +1,7 @@
 # Fetch web page tool
 
+`fetchWebPage` is a network tool: it is offered to models and runs only when `network_tools_enabled` is `true` (default `false`). While the gate is closed the registry refuses it before any request.
+
 `fetchWebPage` fetches a supplied HTTP or HTTPS URL and returns extracted page text without an LLM call. Scheme-less URLs use HTTPS. Requests follow redirects with a 15-second network timeout. The shared `tools/http_response.py` hook closes redirect bodies before reading while retaining Requests' redirect header and cookie handling.
 
 - Decoded responses stream in 64 KiB chunks using urllib3 2.8 or later for bounded decompression. The read loop checks its 15-second deadline between chunks and reads at most 32 MiB of decoded content. Redirect and network waits retain the Requests timeout contract.

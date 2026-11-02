@@ -20,6 +20,7 @@ from .builtin.time_tool import TimeTool
 from .builtin.stop import StopTool
 from .builtin.tool_search import ToolSearchTool
 from .types import ToolExecutionResult
+from .network import NETWORK_TOOLS, network_disabled_result, network_tools_enabled, offline_tools
 from ..config import Settings
 from .external.mcp_client import MCPClient
 from ..debug import debug_log
@@ -41,6 +42,11 @@ BUILTIN_TOOLS = {
     "stop": StopTool(),
     "toolSearchTool": ToolSearchTool(),
 }
+
+def builtin_tools_for(cfg) -> Dict[str, Any]:
+    """Builtin tools a reply may offer; network tools only when allowed."""
+    return offline_tools(BUILTIN_TOOLS, cfg)
+
 
 # Global MCP tools cache
 _mcp_tools_cache: Dict[str, "ToolSpec"] = {}
@@ -367,6 +373,13 @@ def _run_tool(
                 print(f"    {message}")
             except Exception:
                 pass
+
+    # Network tools stay closed unless the user turned them on, even when a
+    # model names one that was never offered to it.
+    if name in NETWORK_TOOLS and not network_tools_enabled(cfg):
+        debug_log(f"network tool refused (network_tools_enabled is false): {name}", "tools")
+        _user_print(f"🔒 {name} blocked: network tools are turned off")
+        return network_disabled_result(name)
 
     # Check builtin tools first
     if name in BUILTIN_TOOLS:

@@ -124,6 +124,15 @@ Whisper sometimes produces confident but false transcriptions during silence or 
 
 Both thresholds are exposed in the Settings window under *Whisper*.
 
+#### Transcription Language
+By default Whisper detects the language of each utterance. Short phrases can be mistaken for another language and come out as unrelated words. If you always speak one language, fix it with its ISO-639-1 code; it applies to ambient listening, dictation and push-to-talk:
+
+```json
+{ "whisper_language": "pt" }
+```
+
+Leave it empty (`""`) to keep detection.
+
 </details>
 
 <details>
@@ -178,6 +187,18 @@ Voice listening starts paused, so Jarvis does not transcribe the room until you 
 ```
 
 Set `voice_listening_start_paused` to `false` to start with ambient listening, or `push_to_talk_hotkey` to `""` to turn push-to-talk off.
+
+Each push-to-talk request prints a `📝 Heard (push-to-talk): "…"` line, so you can see what Whisper understood.
+
+## Network Tools
+
+Builtin tools that reach the internet stay off until you allow them: `webSearch`, `fetchWebPage`, `getWeather`, and `getTime` when it has to look up another city. While they are off, models are not offered these tools and a request for one is refused before anything leaves your computer. Your own local time, and time zones given by name (such as `America/Sao_Paulo`), work offline.
+
+```json
+{ "network_tools_enabled": true }
+```
+
+`web_search_enabled` and `wikipedia_fallback_enabled` still apply once network tools are on. MCP servers follow their own configuration.
 
 ## Dictation Mode
 

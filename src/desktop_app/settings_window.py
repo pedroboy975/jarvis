@@ -260,6 +260,10 @@ def _build_field_metadata() -> List[FieldMeta]:
     f("whisper_min_confidence", "Min Confidence",
       "Filter low-confidence segments (hallucination guard)",
       "whisper", "float", min_val=0.0, max_val=1.0, step=0.05)
+    f("whisper_language", "Language",
+      "ISO-639-1 code to transcribe in, such as pt or en. Leave empty to detect "
+      "the language of each utterance (short phrases can be mistaken for another language).",
+      "whisper", "str")
     f("whisper_no_speech_threshold", "No-Speech Threshold",
       "Reject segments where no_speech_prob is at or above this value (filters hallucinations during silence)",
       "whisper", "float", min_val=0.0, max_val=1.0, step=0.05)
@@ -336,6 +340,10 @@ def _build_field_metadata() -> List[FieldMeta]:
       "location", "bool")
 
     # --- Features ---
+    f("network_tools_enabled", "Network Tools",
+      "Allow tools that reach the internet: web search, web pages, weather and "
+      "time in other cities. Off keeps every request on this computer.",
+      "features", "bool")
     f("web_search_enabled", "Web Search",
       "Enable web search tool",
       "features", "bool")

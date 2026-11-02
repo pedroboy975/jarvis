@@ -69,6 +69,10 @@ class MockConfig:
     tts_chatterbox_exaggeration: float = 0.5
     tts_chatterbox_cfg_weight: float = 0.5
     local_files_root: str = "~"
+    # Engine tests use webSearch and getWeather as example tools, so the shared
+    # mock opens the gate; tests/test_network_tools_gate.py covers it closed.
+    network_tools_enabled: bool = True
+    whisper_language: str = ""
     web_search_enabled: bool = True
     brave_search_api_key: str = ""
     wikipedia_fallback_enabled: bool = True

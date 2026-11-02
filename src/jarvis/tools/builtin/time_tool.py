@@ -27,6 +27,7 @@ from ...debug import debug_log
 from ...utils.location import get_location_context_with_timezone
 from ...utils.time_context import format_time_context
 from ..base import Tool, ToolContext
+from ..network import network_disabled_result, network_tools_enabled
 from ..types import ToolExecutionResult
 
 # Open-Meteo geocoding returns an IANA ``timezone`` field per result (the
@@ -149,6 +150,14 @@ class TimeTool(Tool):
                 if _is_valid_iana_zone(location_str):
                     tz_name = location_str.strip()
                     display = tz_name
+                elif not network_tools_enabled(context.cfg):
+                    # Resolving a place name needs the geocoding service.
+                    debug_log("getTime: city lookup refused, network tools are off", "tools")
+                    context.user_print("🔒 City lookup blocked: network tools are turned off")
+                    return network_disabled_result(
+                        f"Looking up the time zone of '{location_str}' (an IANA zone "
+                        "such as America/Sao_Paulo works offline)"
+                    )
                 else:
                     tz_name, display = _geocode_timezone(location_str, timeout_sec)
                     if tz_name is None:

@@ -1183,9 +1183,12 @@ def _run_daemon(smoke_test: bool = False) -> None:
                 push_to_talk_face["owner"] = None
                 debug_log("push-to-talk recording ended", "voice")
 
+            from .config import whisper_language_code as _whisper_language_code
+
             def _deliver_push_to_talk(text: str) -> None:
                 threading.Thread(
                     target=voice_thread.dispatch_push_to_talk, args=(text,),
+                    kwargs={"language": _whisper_language_code(cfg)},
                     name="jarvis-push-to-talk", daemon=True,
                 ).start()
 
