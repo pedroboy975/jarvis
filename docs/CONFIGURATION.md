@@ -211,7 +211,7 @@ Builtin tools that reach the internet stay off until you allow them: `webSearch`
 
 ## Persona
 
-Jarvis answers as a dry, witty butler: each casual answer ends with one short remark. Small models sometimes invent facts to fill that remark. Turn it off for plain answers that stop once the question is answered:
+Jarvis answers as a dry, witty butler: each casual answer ends with one short remark. Small models sometimes invent facts to fill that remark. Turn it off for plain answers that stop once the question is answered. Plain answers are also kept short — one sentence when it suffices, only the detail asked for — because every spoken word is waiting time:
 
 ```json
 { "persona_asides_enabled": false }
