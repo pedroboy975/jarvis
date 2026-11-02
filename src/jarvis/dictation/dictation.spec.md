@@ -208,6 +208,11 @@ Two short beeps generated the same way as the existing `TunePlayer` sonar ping:
   (played after the stream starts, not on key press).
 - **Stop beep** — lower pitch (440 Hz), signals recording stopped.
 
+Playback never blocks the caller. On Windows, `winsound` cannot play an
+in-memory WAV asynchronously (`SND_MEMORY` with `SND_ASYNC` raises), so each beep
+plays synchronously with `SND_MEMORY` on its own daemon thread; playback errors
+are logged at debug level.
+
 ## Setup Wizard
 
 The setup wizard includes a dedicated Dictation page (between Whisper and

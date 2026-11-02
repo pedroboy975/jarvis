@@ -117,10 +117,24 @@ def _play_beep(wav_data: bytes) -> None:
     try:
         if system == "windows":
             import winsound
-            winsound.PlaySound(wav_data, winsound.SND_MEMORY | winsound.SND_ASYNC | winsound.SND_NODEFAULT)
+            # winsound cannot play a memory image asynchronously: SND_MEMORY
+            # with SND_ASYNC raises "Cannot play asynchronously from memory",
+            # so the beep never sounded. Play it synchronously on its own
+            # thread to keep callers non-blocking.
+            threading.Thread(
+                target=_play_beep_windows, args=(winsound, wav_data),
+                name="jarvis-beep", daemon=True,
+            ).start()
         elif sd is not None and np is not None:
             # Cross-platform fallback via sounddevice
             _play_beep_sd(wav_data)
+    except Exception as exc:
+        debug_log(f"beep playback failed: {exc}", "dictation")
+
+
+def _play_beep_windows(winsound: Any, wav_data: bytes) -> None:
+    try:
+        winsound.PlaySound(wav_data, winsound.SND_MEMORY | winsound.SND_NODEFAULT)
     except Exception as exc:
         debug_log(f"beep playback failed: {exc}", "dictation")
 
