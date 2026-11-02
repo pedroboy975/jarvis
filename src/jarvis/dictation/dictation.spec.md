@@ -29,6 +29,9 @@ The engine also serves push-to-talk. Given a `deliver` callback it hands the
 transcript to that callback instead of pasting it, and with `record_history`
 false it saves nothing to dictation history. The daemon runs a second engine on
 `push_to_talk_hotkey` with both options; see `listening.spec.md`.
+Each recording records phase timings in `last_timings`: `mic_open_s` (press to
+capturing), `mic_close_s`, `whisper_s` and `audio_s`. Push-to-talk adds them to
+its usage-log line (see `listening.spec.md`, Usage log).
 Both engines transcribe in `whisper_language` when it is set (see
 `listening.spec.md`, Transcription language); otherwise Whisper detects the
 language of each recording.
@@ -52,8 +55,10 @@ window, with four preset options: `ctrl+alt`, `ctrl+cmd`, `ctrl+shift+d`,
 
 ### Hold-to-Dictate (Standard Mode)
 
-1. **Press hotkey** → start recording audio into buffer, play start beep,
-   set face to `DICTATING`, pause main voice listener.
+1. **Press hotkey** → set face to `DICTATING`, pause main voice listener,
+   open and start the input stream, then play the start beep. The beep means
+   the microphone is already capturing: words spoken after it are never cut
+   off. A press released or superseded before the stream starts gets no beep.
 2. **Hold hotkey** → audio frames accumulate in a dedicated
    `sounddevice.InputStream`. Each stream callback retains its recording-session token. Frames from released or superseded sessions are discarded, including when release occurs during audio conversion. Frame acceptance and release snapshots share the engine lock.
 3. **Release hotkey** → stop recording, play stop beep, set face to
@@ -199,7 +204,8 @@ After transcription, text passes through these stages in order:
 ## Beeps
 
 Two short beeps generated the same way as the existing `TunePlayer` sonar ping:
-- **Start beep** — higher pitch (700 Hz), signals recording started.
+- **Start beep** — higher pitch (700 Hz), signals that the microphone is capturing
+  (played after the stream starts, not on key press).
 - **Stop beep** — lower pitch (440 Hz), signals recording stopped.
 
 ## Setup Wizard

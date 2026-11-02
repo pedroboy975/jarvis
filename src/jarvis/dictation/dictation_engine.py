@@ -674,6 +674,10 @@ class DictationEngine:
         # When the hotkey was last released (monotonic); push-to-talk reads it
         # to time the wait from release to the spoken answer.
         self.last_release_at: Optional[float] = None
+        # Seconds spent in each phase of the last recording, for usage logs:
+        # mic_open_s (press -> capturing), mic_close_s, whisper_s, audio_s.
+        self.last_timings: dict = {}
+        self._pressed_at: Optional[float] = None
 
         # Parse hotkey
         self._modifiers, self._trigger = parse_hotkey(hotkey)
@@ -926,6 +930,8 @@ class DictationEngine:
             self._recording = True
             self._session += 1
             token = self._session
+            self._pressed_at = time.monotonic()
+            self.last_timings = {}
 
         threading.Thread(
             target=self._begin_recording, args=(token,), daemon=True
@@ -985,9 +991,6 @@ class DictationEngine:
 
         # Notify listeners (face state, pause main listener).
         self._notify_session(token, 'recording')
-
-        # Play start beep
-        _play_beep(_get_start_beep())
 
         # Prefer the device's native rate for dictation. The capture helper
         # negotiates channel counts and other supported rates on that input.
@@ -1051,9 +1054,15 @@ class DictationEngine:
             if self._session == token and self._recording:
                 self._stream = stream
                 stream = None
+                if self._pressed_at is not None:
+                    self.last_timings["mic_open_s"] = round(time.monotonic() - self._pressed_at, 2)
         if stream is not None:
             debug_log("dictation session superseded before stream opened — closing", "dictation")
             _close_stream(stream)
+            return
+        # The start beep means "speak now": it plays only once the microphone
+        # is capturing, so words said after it are never cut off.
+        _play_beep(_get_start_beep())
 
     def _audio_callback(self, token: int, indata, frames, time_info, status) -> None:
         """Accept audio only for the active recording that opened this stream."""
@@ -1116,7 +1125,9 @@ class DictationEngine:
         thread. The completion notification also covers teardown failures.
         """
         try:
+            closing = time.monotonic()
             _close_stream(stream)
+            self.last_timings["mic_close_s"] = round(time.monotonic() - closing, 2)
             _play_beep(_get_stop_beep())
             duration = time.monotonic() - start_time
             debug_log(f"dictation recording stopped ({duration:.1f}s)", "dictation")
@@ -1148,7 +1159,10 @@ class DictationEngine:
                 debug_log("audio too short for transcription", "dictation")
                 return
 
+            transcribing = time.monotonic()
             text = self._transcribe(audio)
+            self.last_timings["whisper_s"] = round(time.monotonic() - transcribing, 2)
+            self.last_timings["audio_s"] = round(len(audio) / self._target_sample_rate, 2)
 
             # Apply custom dictionary corrections
             if text and self._custom_dictionary:

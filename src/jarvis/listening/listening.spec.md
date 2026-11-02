@@ -331,7 +331,9 @@ voice request appends one JSON line to `usage_log.jsonl` beside the database
 (`push_to_talk` or `ambient`), transcription seconds (push-to-talk: hotkey
 release to transcript), reply seconds, wait from release to the start of speech
 (the TTS duration callback, after synthesis), speech duration and whether the
-reply engine succeeded. It never holds the transcript or the reply. A request is
+reply engine succeeded. Push-to-talk lines also carry the dictation engine's
+phase timings (`mic_open_s`, `mic_close_s`, `whisper_s`, `audio_s`); phases never
+replace the base fields. It never holds the transcript or the reply. A request is
 written once: at speech start, or at the end of the request when nothing was
 spoken. Write failures are logged at debug level and never interrupt the voice
 path. `python -m jarvis.usage_log` prints requests, failures, median and worst

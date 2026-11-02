@@ -1191,7 +1191,8 @@ def _run_daemon(smoke_test: bool = False) -> None:
                 released = getattr(push_to_talk, "last_release_at", None)
                 timing = _RequestTiming(source="push_to_talk",
                                         started=released if released is not None else heard,
-                                        heard=heard)
+                                        heard=heard,
+                                        phases=dict(getattr(push_to_talk, "last_timings", {}) or {}))
                 threading.Thread(
                     target=voice_thread.dispatch_push_to_talk, args=(text,),
                     kwargs={"language": _whisper_language_code(cfg), "timing": timing},
